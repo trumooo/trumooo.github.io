@@ -42,5 +42,7 @@ is seeded from the date in `content.js`.
 - `manifest.webmanifest` + `icon-*.png` / `apple-touch-icon.png` — home-screen
   install support with the coral icon
 - `og-image.png` — the preview card shown when the link is shared
-- `imessage/` — Swift scaffold + guide for shipping this as a real iMessage
-  app extension once you're in the Apple Developer Program (see its README)
+- `/Daily5-iOS/` (repo root) — complete, ready-to-open Xcode project for the
+  iMessage app extension: open `Daily5.xcodeproj`, press Run, and it appears
+  in the simulator's Messages drawer (see its README for device + App Store
+  steps)
