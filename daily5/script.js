@@ -7,9 +7,13 @@
   "use strict";
 
   const BASE_URL = location.origin + location.pathname;
+  const IMSG_MODE = new URLSearchParams(location.search).get("imsg") === "1";
   const IN_IMESSAGE =
-    new URLSearchParams(location.search).get("imsg") === "1" &&
+    IMSG_MODE &&
     window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.daily5;
+
+  // Inside the Messages drawer vertical space is tight — trim the chrome.
+  if (IMSG_MODE) document.body.classList.add("imsg");
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
@@ -338,14 +342,27 @@
     return xs <= os ? "x" : "o";
   }
 
-  // A board is only accepted from a link if it could occur in a real game.
+  // A board is only accepted from a link if it could occur in a real game:
+  // sane mark counts, no double winner, and the winner's count matching
+  // whose move completed the game.
   function tttPlausible(state) {
     let xs = 0, os = 0;
     for (const c of state) {
       if (c === "x") xs++;
       else if (c === "o") os++;
     }
-    return os <= xs && xs <= os + 1;
+    if (os > xs || xs > os + 1) return false;
+    let xWin = false, oWin = false;
+    for (const [a, b, c] of WINS) {
+      if (state[a] !== "-" && state[a] === state[b] && state[b] === state[c]) {
+        if (state[a] === "x") xWin = true;
+        else oWin = true;
+      }
+    }
+    if (xWin && oWin) return false;
+    if (xWin && xs !== os + 1) return false;
+    if (oWin && xs !== os) return false;
+    return true;
   }
 
   function tttInit(state) {
