@@ -748,6 +748,60 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
 
 .btn-dice:active { transform: rotate(-20deg) scale(0.92); }
 
+.pict-tools-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.pict-colors {
+  display: flex;
+  gap: 8px;
+}
+
+.color-dot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--dot);
+  border: 3px solid var(--card);
+  box-shadow: 0 0 0 2px var(--peach);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.color-dot:active { transform: scale(0.9); }
+
+.color-dot.active {
+  box-shadow: 0 0 0 3px var(--dot);
+  transform: scale(1.1);
+}
+
+.pict-timer {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 2px solid var(--peach);
+  border-radius: 999px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+.pict-timer.low {
+  color: #fff;
+  background: var(--coral-dark);
+  border-color: var(--coral-dark);
+  animation: timerpulse 1s ease infinite;
+}
+
+@keyframes timerpulse {
+  50% { transform: scale(1.06); }
+}
+
 .pict-canvas-wrap {
   background: #fffdfb;
   border: 2px solid var(--peach);
