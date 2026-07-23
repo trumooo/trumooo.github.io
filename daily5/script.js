@@ -91,6 +91,32 @@
     if (location.hash) history.replaceState(null, "", BASE_URL + location.search);
   }
 
+  // localStorage can throw (private mode, disabled) — never let that break the app.
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch { /* best effort */ } },
+  };
+
+  function sentSet() {
+    try { return new Set(JSON.parse(store.get("daily5-sent-" + todayKey()) || "[]")); }
+    catch { return new Set(); }
+  }
+
+  function markSent(type, idx) {
+    const set = sentSet();
+    set.add(type + "." + idx);
+    store.set("daily5-sent-" + todayKey(), JSON.stringify([...set]));
+  }
+
+  function isSent(type, idx) {
+    return sentSet().has(type + "." + idx);
+  }
+
+  // A tiny haptic tick on devices that support it (no-op elsewhere).
+  function tick() {
+    if (navigator.vibrate) { try { navigator.vibrate(8); } catch { /* ignore */ } }
+  }
+
   // ---------- sending ----------
 
   const toastEl = document.getElementById("toast");
@@ -123,8 +149,9 @@
 
   let sendInFlight = false;
 
+  // Resolves to "sent" | "copied" | "aborted" | "failed" | "busy".
   async function send(text, url) {
-    if (sendInFlight) return;
+    if (sendInFlight) return "busy";
     sendInFlight = true;
     try {
       const full = url ? `${text}\n\n${url}` : text;
@@ -132,26 +159,43 @@
       // Inside the iMessage extension the native side inserts an MSMessage.
       if (IN_IMESSAGE) {
         window.webkit.messageHandlers.daily5.postMessage({ text, url: url || BASE_URL });
-        return;
+        return "sent";
       }
       if (navigator.share) {
         try {
           await navigator.share({ text: full });
           toast("Off it goes 📨");
-          return;
+          return "sent";
         } catch (e) {
-          if (e.name === "AbortError") return; // user closed the sheet
+          if (e.name === "AbortError") return "aborted"; // user closed the sheet
         }
       }
       try {
         await copyText(full);
         toast("Copied! Paste it into Messages 💬");
+        return "copied";
       } catch {
         toast("Couldn't copy — select and copy manually");
+        return "failed";
       }
     } finally {
       sendInFlight = false;
     }
+  }
+
+  // Send + flash "Sent ✓" on the button, then restore (or swap) its label.
+  async function sendFromButton(btn, text, url, restoreLabel) {
+    const outcome = await send(text, url);
+    if (outcome === "sent" || outcome === "copied") {
+      const orig = restoreLabel || btn.textContent;
+      btn.textContent = "Sent ✓";
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.textContent = orig;
+        btn.disabled = false;
+      }, 1600);
+    }
+    return outcome;
   }
 
   // ---------- views ----------
@@ -210,9 +254,15 @@
     const card = document.createElement("div");
     card.className = "card";
 
+    const wasSent = isSent(type, idx);
     const top = document.createElement("div");
     top.className = "card-top";
-    top.innerHTML = `<span class="badge ${meta.badge}">${meta.label}</span><span class="card-emoji" aria-hidden="true">${meta.emoji}</span>`;
+    top.innerHTML =
+      `<span class="card-top-left">
+         <span class="badge ${meta.badge}">${meta.label}</span>
+         <span class="sent-chip${wasSent ? "" : " hidden"}">Sent ✓</span>
+       </span>
+       <span class="card-emoji" aria-hidden="true">${meta.emoji}</span>`;
     card.appendChild(top);
 
     let shareText;
@@ -231,6 +281,7 @@
       );
       const revealBtn = card.querySelector(".btn-reveal");
       revealBtn.addEventListener("click", () => {
+        tick();
         revealBtn.classList.add("hidden");
         card.querySelector(".answer").classList.remove("hidden");
       });
@@ -256,8 +307,14 @@
     const sendBtn = document.createElement("button");
     sendBtn.type = "button";
     sendBtn.className = "btn btn-primary";
-    sendBtn.textContent = "Send this one 📨";
-    sendBtn.addEventListener("click", () => send(shareText, shareUrl));
+    sendBtn.textContent = wasSent ? "Send again 📨" : "Send this one 📨";
+    sendBtn.addEventListener("click", async () => {
+      const outcome = await sendFromButton(sendBtn, shareText, shareUrl, "Send again 📨");
+      if (outcome === "sent" || outcome === "copied") {
+        markSent(type, idx);
+        card.querySelector(".sent-chip").classList.remove("hidden");
+      }
+    });
     actions.appendChild(sendBtn);
     card.appendChild(actions);
     return card;
@@ -325,7 +382,7 @@
     [0, 4, 8], [2, 4, 6],
   ];
 
-  let tttBoard, tttMoved;
+  let tttBoard, tttMoved, tttMyMove;
 
   function tttWinner(b) {
     for (const line of WINS) {
@@ -370,6 +427,7 @@
   function tttInit(state) {
     tttBoard = state.split("");
     tttMoved = false;
+    tttMyMove = -1;
     tttRender();
   }
 
@@ -383,6 +441,10 @@
     const glyph = { x: "❌", o: "⭕", "-": "" };
     const spoken = { x: "X", o: "O", "-": "empty" };
 
+    // The mark a tap would place: the current turn, or (when repositioning
+    // an unsent move) the mark already placed.
+    const myMark = tttMoved ? tttBoard[tttMyMove] : turn;
+
     boardEl.innerHTML = "";
     tttBoard.forEach((cell, i) => {
       const btn = document.createElement("button");
@@ -394,10 +456,14 @@
         `Row ${Math.floor(i / 3) + 1}, column ${(i % 3) + 1}: ${spoken[cell]}`
       );
       if (win && win.line.includes(i)) btn.classList.add("win");
-      btn.disabled = cell !== "-" || !!win || tttMoved;
+      btn.disabled = cell !== "-" || !!win;
+      if (!btn.disabled) btn.dataset.preview = glyph[myMark];
       btn.addEventListener("click", () => {
-        tttBoard[i] = turn;
+        if (tttMoved) tttBoard[tttMyMove] = "-"; // reposition the unsent move
+        tttBoard[i] = myMark;
+        tttMyMove = i;
         tttMoved = true;
+        tick();
         tttRender();
       });
       boardEl.appendChild(btn);
@@ -410,7 +476,7 @@
       statusEl.textContent = `It's a draw 🤝 ${tttMoved ? "Send it back to make it official." : "Rematch?"}`;
       sendBtn.classList.toggle("hidden", !tttMoved);
     } else if (tttMoved) {
-      statusEl.textContent = "Nice move! Now send the board back 👇";
+      statusEl.textContent = "Nice move! Send it — or tap another square to change your mind.";
       sendBtn.classList.remove("hidden");
     } else {
       statusEl.textContent = `You're ${glyph[turn]} — tap a square to make your move.`;
@@ -418,7 +484,7 @@
     }
   }
 
-  document.getElementById("ttt-send").addEventListener("click", () => {
+  document.getElementById("ttt-send").addEventListener("click", (e) => {
     const state = tttBoard.join("");
     const win = tttWinner(state);
     const url = `${BASE_URL}#ttt=${state}`;
@@ -426,7 +492,7 @@
     if (win) text = "⭕ Tic-Tac-Toe: that's game!! Tap to see the final board 🏆";
     else if (!state.includes("-")) text = "⭕ Tic-Tac-Toe: it's a draw. We're too evenly matched 🤝";
     else text = "⭕ Tic-Tac-Toe: your move! Tap to play 👇";
-    send(text, url);
+    sendFromButton(e.currentTarget, text, url);
   });
 
   document.getElementById("ttt-reset").addEventListener("click", () => {
@@ -454,7 +520,11 @@
       return;
     }
     const url = `${BASE_URL}#emoji=${enc(puzzle)}.${enc(answer)}`;
-    send(`🧩 Emoji Riddle: ${puzzle}\n\nThink you know it? Tap to check 👇`, url);
+    sendFromButton(
+      document.getElementById("emoji-send"),
+      `🧩 Emoji Riddle: ${puzzle}\n\nThink you know it? Tap to check 👇`,
+      url
+    );
   }
 
   document.getElementById("emoji-send").addEventListener("click", emojiSubmit);
@@ -478,6 +548,7 @@
     answerEl.textContent = answer;
     backBtn.classList.add("hidden");
     revealBtn.onclick = () => {
+      tick();
       revealBtn.classList.add("hidden");
       answerEl.classList.remove("hidden");
       backBtn.classList.remove("hidden");
@@ -599,6 +670,17 @@
   function pictComposeRepaint() {
     const all = pictLive ? pictStrokes.concat([pictLive]) : pictStrokes;
     pictPaint(pictCanvas, all);
+    if (!all.length) {
+      // Empty canvas: show a gentle affordance where the drawing goes.
+      const ctx = pictCanvas.getContext("2d");
+      const size = pictCanvas.width;
+      if (!size) return;
+      ctx.fillStyle = "#d9c0b6";
+      ctx.font = `600 ${Math.round(size / 16)}px Nunito, -apple-system, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("✏️ draw your word here", size / 2, size / 2);
+    }
   }
 
   function pictRandomWord() {
@@ -691,7 +773,11 @@
       return;
     }
     const url = `${BASE_URL}#draw=${enc(word)}.${encodeStrokes(pictStrokes)}`;
-    send("🎨 Pictionary! I drew something for you... watch it, guess it, then tap to reveal 👇", url);
+    sendFromButton(
+      document.getElementById("pict-send"),
+      "🎨 Pictionary! I drew something for you... watch it, guess it, then tap to reveal 👇",
+      url
+    );
   });
 
   function pictReplay() {
@@ -727,6 +813,7 @@
     wordEl.textContent = `It's... ${word}!`;
     backBtn.classList.add("hidden");
     revealBtn.onclick = () => {
+      tick();
       revealBtn.classList.add("hidden");
       wordEl.classList.remove("hidden");
       backBtn.classList.remove("hidden");
@@ -789,6 +876,7 @@
         </div>`;
       const revealBtn = el.querySelector(".btn-reveal");
       revealBtn.addEventListener("click", () => {
+        tick();
         revealBtn.classList.add("hidden");
         el.querySelector(".answer").classList.remove("hidden");
         el.querySelector(".score-row").classList.remove("hidden");
@@ -799,9 +887,20 @@
         if (yes.disabled) return;
         yes.disabled = no.disabled = true;
         btn.classList.add("picked");
+        el.dataset.done = "1";
         if (gotIt) battleScore++;
         battleAnswered++;
-        if (battleAnswered === 5) battleFinish();
+        tick();
+        if (battleAnswered === 5) {
+          battleFinish();
+        } else {
+          // Carry the player to the next unanswered question.
+          const next = arena.querySelector(".battle-q:not([data-done])");
+          if (next) {
+            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            next.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+          }
+        }
       }
       yes.addEventListener("click", () => pick(true, yes));
       no.addEventListener("click", () => pick(false, no));
@@ -832,10 +931,10 @@
     document.getElementById("battle-send").classList.remove("hidden");
   }
 
-  document.getElementById("battle-send").addEventListener("click", () => {
+  document.getElementById("battle-send").addEventListener("click", (e) => {
     const when = battleKey === todayKey() ? "today's questions" : `the ${battleKey} questions`;
     const url = `${BASE_URL}#battle=${battleKey}.${battleScore}`;
-    send(`⚔️ Trivia Battle: I scored ${battleScore}/5 on ${when}. Your turn — tap to play the same set 👇`, url);
+    sendFromButton(e.currentTarget, `⚔️ Trivia Battle: I scored ${battleScore}/5 on ${when}. Your turn — tap to play the same set 👇`, url);
   });
 
   document.getElementById("battle-again").addEventListener("click", () => {

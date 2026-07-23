@@ -204,6 +204,26 @@ button, input { touch-action: manipulation; }
   margin-bottom: 10px;
 }
 
+.card-top-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sent-chip {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: var(--teal);
+  color: #fff;
+  border-radius: 999px;
+  padding: 3px 10px;
+  animation: pop 0.25s ease;
+}
+
 .badge {
   font-family: "Baloo 2", sans-serif;
   font-weight: 700;
@@ -464,6 +484,13 @@ button, input { touch-action: manipulation; }
 }
 
 .ttt-cell:not(:disabled):hover { border-color: var(--coral); }
+
+@media (hover: hover) {
+  .ttt-cell:not(:disabled):empty:hover::after {
+    content: attr(data-preview);
+    opacity: 0.35;
+  }
+}
 .ttt-cell:active { transform: scale(0.94); }
 .ttt-cell:disabled { cursor: default; }
 
