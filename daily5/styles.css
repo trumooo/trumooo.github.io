@@ -688,6 +688,14 @@ button, input { touch-action: manipulation; }
 .pict-reveal-wrap { margin-top: 14px; }
 
 /* trivia battle */
+.battle-progress {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--teal);
+  margin: -8px 0 14px;
+}
+
 .battle-q {
   background: var(--card);
   border-radius: var(--radius);

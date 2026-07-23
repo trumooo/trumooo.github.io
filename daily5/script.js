@@ -1102,6 +1102,10 @@
     arena.innerHTML = "";
     document.getElementById("battle-send").classList.add("hidden");
     document.getElementById("battle-again").classList.add("hidden");
+    document.getElementById("battle-invite").classList.remove("hidden");
+    const progressEl = document.getElementById("battle-progress");
+    progressEl.classList.add("hidden");
+    progressEl.textContent = "";
 
     battleSet(dateKey).forEach((item, n) => {
       const el = document.createElement("div");
@@ -1134,6 +1138,12 @@
         if (gotIt) battleScore++;
         battleAnswered++;
         tick();
+        const progressEl = document.getElementById("battle-progress");
+        progressEl.classList.remove("hidden");
+        progressEl.textContent =
+          battleAnswered === 5
+            ? "All five answered! 🎉"
+            : `Answered ${battleAnswered} of 5 — finish them all, then send your score.`;
         if (battleAnswered === 5) {
           battleFinish();
         } else {
@@ -1189,6 +1199,14 @@
   document.getElementById("battle-again").addEventListener("click", () => {
     clearHash();
     battleInit(todayKey(), null);
+  });
+
+  // Shareable before you've played: sends the same challenge link as the
+  // games-list Invite button, pinned to this battle's question set.
+  document.getElementById("battle-invite").addEventListener("click", (e) => {
+    const g = GAMES.find((game) => game.id === "battle");
+    const url = `${BASE_URL}#g=battle.${battleKey || todayKey()}`;
+    sendFromButton(e.currentTarget, g.invite, url, null, IN_IMESSAGE ? bubbleForInvite(g) : null);
   });
 
   // ---------- hash routing ----------
