@@ -171,6 +171,7 @@ const GAMES = [
     emoji: "⭕",
     players: 2,
     desc: "Classic 3-in-a-row. Make your move, send it, and wait for their comeback.",
+    invite: "⭕ Tic-Tac-Toe: I challenge you! You go first — tap to make the opening move 👇",
   },
   {
     id: "emoji",
@@ -178,6 +179,7 @@ const GAMES = [
     emoji: "🧩",
     players: 2,
     desc: "Write a movie, song, or phrase in pure emoji. They guess, then tap to reveal.",
+    invite: "🧩 Emoji Riddle: send me one to crack! Tap to write yours 👇",
   },
   {
     id: "pict",
@@ -185,6 +187,7 @@ const GAMES = [
     emoji: "🎨",
     players: 2,
     desc: "Get a word, draw it, send it. They watch it replay, guess, then reveal. No letters allowed!",
+    invite: "🎨 Pictionary: draw me something! Tap to start sketching 👇",
   },
   {
     id: "battle",
@@ -192,5 +195,6 @@ const GAMES = [
     emoji: "⚔️",
     players: 2,
     desc: "Same 5 daily questions for both of you. Play, send your score, settle it.",
+    invite: "⚔️ Trivia Battle: I challenge you to today's 5 questions! Play, then send me your score 👇",
   },
 ];
