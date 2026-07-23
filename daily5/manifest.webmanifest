@@ -1,0 +1,14 @@
+{
+  "name": "Daily5",
+  "short_name": "Daily5",
+  "description": "Five fresh cards a day for long-distance friends: trivia, questions, challenges & games.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#fff6f1",
+  "theme_color": "#ff7059",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

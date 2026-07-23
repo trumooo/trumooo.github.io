@@ -3,11 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Daily5 · a little something every day</title>
-  <meta name="description" content="Daily5 — five fresh cards a day for long-distance friends: trivia, questions, photo challenges, and games you play over iMessage." />
+  <title>Daily5 🪸 — trivia, questions & games for long-distance friends</title>
+  <meta name="description" content="Five fresh cards a day for long-distance friends: trivia with a reveal, questions of the day, photo challenges, and turn-based games you play over Messages." />
   <meta property="og:title" content="Daily5 🪸" />
-  <meta property="og:description" content="Five fresh cards a day for long-distance friends. Trivia, questions, challenges & games." />
-  <meta name="theme-color" content="#ff7059" />
+  <meta property="og:description" content="Five fresh cards a day for long-distance friends. Trivia, questions, challenges & games — right in Messages." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://trumooo.github.io/daily5/" />
+  <meta property="og:image" content="https://trumooo.github.io/daily5/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#ff7059" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#241310" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Daily5" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪸</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,100 +29,108 @@
 
     <header class="header">
       <div class="logo-row">
-        <span class="logo-coral">🪸</span>
+        <span class="logo-coral" aria-hidden="true">🪸</span>
         <h1>Daily<span class="logo-five">5</span></h1>
       </div>
       <p class="tagline">a little something every day, no matter the miles</p>
       <p class="date-chip" id="date-chip"></p>
     </header>
 
-    <nav class="tabs" id="tabs">
-      <button class="tab active" data-tab="today">☀️ Today's Five</button>
-      <button class="tab" data-tab="games">🎮 Games</button>
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <button type="button" class="tab active" data-tab="today">☀️ Today's Five</button>
+      <button type="button" class="tab" data-tab="games">🎮 Games</button>
     </nav>
 
-    <!-- Today's five cards -->
-    <main id="view-today" class="view">
-      <p class="hint">Pick your favorites and send them to your person 💌</p>
-      <div id="deck"></div>
-    </main>
+    <noscript>
+      <p class="hint">Daily5 needs JavaScript to shuffle today's cards — please enable it and refresh 🪸</p>
+    </noscript>
 
-    <!-- Games list -->
-    <main id="view-games" class="view hidden">
-      <p class="hint">Turn-based games that travel through Messages — like passing notes, but faster 📨</p>
-      <div id="game-list"></div>
-    </main>
+    <main>
+      <!-- Today's five cards -->
+      <section id="view-today" class="view" aria-label="Today's five cards">
+        <p class="hint">Pick your favorites and send them to your person 💌</p>
+        <div id="deck"></div>
+      </section>
 
-    <!-- Single received card (opened from a shared link) -->
-    <main id="view-card" class="view hidden">
-      <button class="back-btn" data-back>← back to today's five</button>
-      <div id="single-card"></div>
-    </main>
+      <!-- Games list -->
+      <section id="view-games" class="view hidden" aria-label="Games">
+        <p class="hint">Turn-based games that travel through Messages — like passing notes, but faster 📨</p>
+        <div id="game-list"></div>
+      </section>
 
-    <!-- Tic-Tac-Toe -->
-    <main id="view-ttt" class="view hidden">
-      <button class="back-btn" data-back>← back</button>
-      <div class="game-head">
-        <h2>⭕ Tic-Tac-Toe</h2>
-        <span class="players-badge">👥 2 players</span>
-      </div>
-      <p class="game-status" id="ttt-status"></p>
-      <div class="ttt-board" id="ttt-board"></div>
-      <div class="game-actions">
-        <button class="btn btn-primary hidden" id="ttt-send">Send your move 📨</button>
-        <button class="btn btn-ghost" id="ttt-reset">New game</button>
-      </div>
-    </main>
+      <!-- Single received card (opened from a shared link) -->
+      <section id="view-card" class="view hidden" aria-label="Card sent to you">
+        <button type="button" class="back-btn" data-back>← back to today's five</button>
+        <div id="single-card"></div>
+      </section>
 
-    <!-- Emoji Riddle -->
-    <main id="view-emoji" class="view hidden">
-      <button class="back-btn" data-back>← back</button>
-      <div class="game-head">
-        <h2>🧩 Emoji Riddle</h2>
-        <span class="players-badge">👥 2 players</span>
-      </div>
-
-      <div id="emoji-compose">
-        <p class="game-status">Write something in pure emoji — a movie, song, place, or inside joke — and let them sweat it out.</p>
-        <label class="field">
-          <span>Your emoji riddle</span>
-          <input id="emoji-puzzle" type="text" inputmode="text" placeholder="🐠🔍 (Finding Nemo)" maxlength="40" />
-        </label>
-        <label class="field">
-          <span>The answer (hidden until they tap reveal)</span>
-          <input id="emoji-answer" type="text" placeholder="Finding Nemo" maxlength="60" />
-        </label>
+      <!-- Tic-Tac-Toe -->
+      <section id="view-ttt" class="view hidden" aria-label="Tic-Tac-Toe">
+        <button type="button" class="back-btn" data-back>← back</button>
+        <div class="game-head">
+          <h2>⭕ Tic-Tac-Toe</h2>
+          <span class="players-badge">👥 2 players</span>
+        </div>
+        <p class="game-status" id="ttt-status" aria-live="polite"></p>
+        <div class="ttt-board" id="ttt-board" role="grid" aria-label="Tic-Tac-Toe board"></div>
         <div class="game-actions">
-          <button class="btn btn-primary" id="emoji-send">Send riddle 📨</button>
+          <button type="button" class="btn btn-primary hidden" id="ttt-send">Send your move 📨</button>
+          <button type="button" class="btn btn-ghost" id="ttt-reset">New game</button>
         </div>
-      </div>
+      </section>
 
-      <div id="emoji-solve" class="hidden">
-        <p class="game-status">Your friend sent you a riddle. Guess it out loud, then check yourself:</p>
-        <div class="emoji-display" id="emoji-display"></div>
-        <div class="reveal-wrap">
-          <button class="btn btn-reveal" id="emoji-reveal">Tap to reveal 👀</button>
-          <p class="answer hidden" id="emoji-answer-text"></p>
+      <!-- Emoji Riddle -->
+      <section id="view-emoji" class="view hidden" aria-label="Emoji Riddle">
+        <button type="button" class="back-btn" data-back>← back</button>
+        <div class="game-head">
+          <h2>🧩 Emoji Riddle</h2>
+          <span class="players-badge">👥 2 players</span>
         </div>
+
+        <div id="emoji-compose">
+          <p class="game-status">Write something in pure emoji — a movie, song, place, or inside joke — and let them sweat it out.</p>
+          <label class="field">
+            <span>Your emoji riddle</span>
+            <input id="emoji-puzzle" type="text" inputmode="text" placeholder="🐠🔍 (Finding Nemo)" maxlength="40"
+                   autocomplete="off" autocapitalize="off" enterkeyhint="next" />
+          </label>
+          <label class="field">
+            <span>The answer (hidden until they tap reveal)</span>
+            <input id="emoji-answer" type="text" placeholder="Finding Nemo" maxlength="60"
+                   autocomplete="off" enterkeyhint="send" />
+          </label>
+          <div class="game-actions">
+            <button type="button" class="btn btn-primary" id="emoji-send">Send riddle 📨</button>
+          </div>
+        </div>
+
+        <div id="emoji-solve" class="hidden">
+          <p class="game-status">Your friend sent you a riddle. Guess it out loud, then check yourself:</p>
+          <div class="emoji-display" id="emoji-display"></div>
+          <div class="reveal-wrap">
+            <button type="button" class="btn btn-reveal" id="emoji-reveal">Tap to reveal 👀</button>
+            <p class="answer hidden" id="emoji-answer-text" aria-live="polite"></p>
+          </div>
+          <div class="game-actions">
+            <button type="button" class="btn btn-primary hidden" id="emoji-back-atcha">Send one back 🔁</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trivia Battle -->
+      <section id="view-battle" class="view hidden" aria-label="Trivia Battle">
+        <button type="button" class="back-btn" data-back>← back</button>
+        <div class="game-head">
+          <h2>⚔️ Trivia Battle</h2>
+          <span class="players-badge">👥 2 players</span>
+        </div>
+        <p class="game-status" id="battle-status" aria-live="polite">Five questions, same for both of you today. Answer honestly — friendship court is in session.</p>
+        <div id="battle-arena"></div>
         <div class="game-actions">
-          <button class="btn btn-primary hidden" id="emoji-back-atcha">Send one back 🔁</button>
+          <button type="button" class="btn btn-primary hidden" id="battle-send">Send your score 📨</button>
+          <button type="button" class="btn btn-ghost hidden" id="battle-again">Play today's set</button>
         </div>
-      </div>
-    </main>
-
-    <!-- Trivia Battle -->
-    <main id="view-battle" class="view hidden">
-      <button class="back-btn" data-back>← back</button>
-      <div class="game-head">
-        <h2>⚔️ Trivia Battle</h2>
-        <span class="players-badge">👥 2 players</span>
-      </div>
-      <p class="game-status" id="battle-status">Five questions, same for both of you today. Answer honestly — friendship court is in session.</p>
-      <div id="battle-arena"></div>
-      <div class="game-actions">
-        <button class="btn btn-primary hidden" id="battle-send">Send your score 📨</button>
-        <button class="btn btn-ghost hidden" id="battle-again">Play today's set</button>
-      </div>
+      </section>
     </main>
 
     <footer class="footer">
@@ -121,7 +139,7 @@
     </footer>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script src="content.js"></script>
   <script src="script.js"></script>

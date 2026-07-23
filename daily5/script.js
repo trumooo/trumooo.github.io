@@ -11,6 +11,12 @@
     new URLSearchParams(location.search).get("imsg") === "1" &&
     window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.daily5;
 
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
   // ---------- seeded randomness ----------
 
   function hashString(str) {
@@ -55,7 +61,8 @@
     const rand = mulberry32(hashString("battle:" + dateKey));
     const skip = dailyPicks(dateKey).trivia;
     const picked = [];
-    while (picked.length < 5) {
+    let guard = 0;
+    while (picked.length < 5 && guard++ < 1000) {
       const i = Math.floor(rand() * CONTENT.trivia.length);
       if (i !== skip && !picked.includes(i)) picked.push(i);
     }
@@ -76,6 +83,10 @@
     }
   }
 
+  function clearHash() {
+    if (location.hash) history.replaceState(null, "", BASE_URL + location.search);
+  }
+
   // ---------- sending ----------
 
   const toastEl = document.getElementById("toast");
@@ -88,27 +99,54 @@
     toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2600);
   }
 
-  async function send(text, url) {
-    const full = url ? `${text}\n\n${url}` : text;
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Fallback for older browsers / non-secure contexts
+    return new Promise((resolve, reject) => {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      ok ? resolve() : reject(new Error("copy failed"));
+    });
+  }
 
-    // Inside the iMessage extension the native side inserts an MSMessage.
-    if (IN_IMESSAGE) {
-      window.webkit.messageHandlers.daily5.postMessage({ text, url: url || BASE_URL });
-      return;
-    }
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: full });
-        return;
-      } catch (e) {
-        if (e.name === "AbortError") return; // user closed the sheet
-      }
-    }
+  let sendInFlight = false;
+
+  async function send(text, url) {
+    if (sendInFlight) return;
+    sendInFlight = true;
     try {
-      await navigator.clipboard.writeText(full);
-      toast("Copied! Paste it into Messages 💬");
-    } catch {
-      toast("Couldn't copy — select and copy manually");
+      const full = url ? `${text}\n\n${url}` : text;
+
+      // Inside the iMessage extension the native side inserts an MSMessage.
+      if (IN_IMESSAGE) {
+        window.webkit.messageHandlers.daily5.postMessage({ text, url: url || BASE_URL });
+        return;
+      }
+      if (navigator.share) {
+        try {
+          await navigator.share({ text: full });
+          toast("Off it goes 📨");
+          return;
+        } catch (e) {
+          if (e.name === "AbortError") return; // user closed the sheet
+        }
+      }
+      try {
+        await copyText(full);
+        toast("Copied! Paste it into Messages 💬");
+      } catch {
+        toast("Couldn't copy — select and copy manually");
+      }
+    } finally {
+      sendInFlight = false;
     }
   }
 
@@ -116,22 +154,38 @@
 
   const views = ["today", "games", "card", "ttt", "emoji", "battle"];
 
+  const VIEW_TITLES = {
+    today: "Daily5 🪸 — today's five",
+    games: "Daily5 🪸 — games",
+    card: "Daily5 🪸 — a card for you",
+    ttt: "Daily5 🪸 — Tic-Tac-Toe",
+    emoji: "Daily5 🪸 — Emoji Riddle",
+    battle: "Daily5 🪸 — Trivia Battle",
+  };
+
   function show(name) {
     views.forEach((v) => document.getElementById("view-" + v).classList.toggle("hidden", v !== name));
     document.getElementById("tabs").classList.toggle("hidden", name === "card");
     document.querySelectorAll(".tab").forEach((t) => {
       t.classList.toggle("active", t.dataset.tab === name);
     });
+    document.title = VIEW_TITLES[name] || "Daily5 🪸";
+    const viewEl = document.getElementById("view-" + name);
+    viewEl.setAttribute("tabindex", "-1");
+    viewEl.focus({ preventScroll: true });
     window.scrollTo(0, 0);
   }
 
   document.querySelectorAll(".tab").forEach((t) =>
-    t.addEventListener("click", () => show(t.dataset.tab))
+    t.addEventListener("click", () => {
+      clearHash();
+      show(t.dataset.tab);
+    })
   );
 
   document.querySelectorAll("[data-back]").forEach((b) =>
     b.addEventListener("click", () => {
-      history.replaceState(null, "", BASE_URL + location.search);
+      clearHash();
       show("today");
     })
   );
@@ -142,7 +196,7 @@
     trivia: { badge: "badge-trivia", label: "Trivia", emoji: "🧠" },
     qotd: { badge: "badge-qotd", label: "Question of the day", emoji: "💬" },
     challenge: { badge: "badge-challenge", label: "Challenge", emoji: "📸" },
-    thisOrThat: { badge: "badge-thisorthat", label: "This or that", emoji: "🤔" },
+    thisOrThat: { badge: "badge-thisOrThat", label: "This or that", emoji: "🤔" },
     wildcard: { badge: "badge-wildcard", label: "Wildcard", emoji: "🎲" },
   };
 
@@ -153,7 +207,7 @@
 
     const top = document.createElement("div");
     top.className = "card-top";
-    top.innerHTML = `<span class="badge ${meta.badge}">${meta.label}</span><span class="card-emoji">${meta.emoji}</span>`;
+    top.innerHTML = `<span class="badge ${meta.badge}">${meta.label}</span><span class="card-emoji" aria-hidden="true">${meta.emoji}</span>`;
     card.appendChild(top);
 
     let shareText;
@@ -164,10 +218,10 @@
       shareText = `🧠 Trivia time! ${item.q}\n\nTap to reveal the answer 👇`;
       card.insertAdjacentHTML(
         "beforeend",
-        `<p class="card-text">${item.q}</p>
+        `<p class="card-text">${esc(item.q)}</p>
          <div class="reveal-wrap">
-           <button class="btn btn-reveal">Tap to reveal 👀</button>
-           <p class="answer hidden">${item.a}</p>
+           <button type="button" class="btn btn-reveal">Tap to reveal 👀</button>
+           <p class="answer hidden" aria-live="polite">${esc(item.a)}</p>
          </div>`
       );
       const revealBtn = card.querySelector(".btn-reveal");
@@ -181,20 +235,21 @@
       card.insertAdjacentHTML(
         "beforeend",
         `<div class="tot-row">
-           <div class="tot-option">${a}</div>
-           <span class="tot-vs">VS</span>
-           <div class="tot-option">${b}</div>
+           <div class="tot-option">${esc(a)}</div>
+           <span class="tot-vs" aria-label="versus">VS</span>
+           <div class="tot-option">${esc(b)}</div>
          </div>`
       );
     } else {
       const text = CONTENT[type][idx];
       shareText = `${meta.emoji} ${meta.label}: ${text}`;
-      card.insertAdjacentHTML("beforeend", `<p class="card-text">${text}</p>`);
+      card.insertAdjacentHTML("beforeend", `<p class="card-text">${esc(text)}</p>`);
     }
 
     const actions = document.createElement("div");
     actions.className = "card-actions";
     const sendBtn = document.createElement("button");
+    sendBtn.type = "button";
     sendBtn.className = "btn btn-primary";
     sendBtn.textContent = "Send this one 📨";
     sendBtn.addEventListener("click", () => send(shareText, shareUrl));
@@ -203,8 +258,11 @@
     return card;
   }
 
+  let renderedDeckKey = null;
+
   function renderDeck() {
     const key = todayKey();
+    renderedDeckKey = key;
     const picks = dailyPicks(key);
     const deck = document.getElementById("deck");
     deck.innerHTML = "";
@@ -221,19 +279,25 @@
     });
   }
 
+  // A tab left open overnight gets fresh cards when it wakes up.
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && renderedDeckKey !== todayKey()) renderDeck();
+  });
+
   // ---------- games list ----------
 
   function renderGames() {
     const list = document.getElementById("game-list");
     list.innerHTML = "";
     GAMES.forEach((g) => {
-      const el = document.createElement("div");
+      const el = document.createElement("button");
+      el.type = "button";
       el.className = "game-card";
       el.innerHTML = `
-        <div class="game-emoji">${g.emoji}</div>
+        <div class="game-emoji" aria-hidden="true">${g.emoji}</div>
         <div class="game-info">
-          <h3>${g.name}</h3>
-          <p>${g.desc}</p>
+          <h3>${esc(g.name)}</h3>
+          <p>${esc(g.desc)}</p>
         </div>
         <span class="players-badge">👥 ${g.players} players</span>`;
       el.addEventListener("click", () => openGame(g.id));
@@ -274,6 +338,16 @@
     return xs <= os ? "x" : "o";
   }
 
+  // A board is only accepted from a link if it could occur in a real game.
+  function tttPlausible(state) {
+    let xs = 0, os = 0;
+    for (const c of state) {
+      if (c === "x") xs++;
+      else if (c === "o") os++;
+    }
+    return os <= xs && xs <= os + 1;
+  }
+
   function tttInit(state) {
     tttBoard = state.split("");
     tttMoved = false;
@@ -288,12 +362,18 @@
     const full = !tttBoard.includes("-");
     const turn = tttTurn(tttBoard);
     const glyph = { x: "❌", o: "⭕", "-": "" };
+    const spoken = { x: "X", o: "O", "-": "empty" };
 
     boardEl.innerHTML = "";
     tttBoard.forEach((cell, i) => {
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.className = "ttt-cell";
       btn.textContent = glyph[cell];
+      btn.setAttribute(
+        "aria-label",
+        `Row ${Math.floor(i / 3) + 1}, column ${(i % 3) + 1}: ${spoken[cell]}`
+      );
       if (win && win.line.includes(i)) btn.classList.add("win");
       btn.disabled = cell !== "-" || !!win || tttMoved;
       btn.addEventListener("click", () => {
@@ -330,26 +410,41 @@
     send(text, url);
   });
 
-  document.getElementById("ttt-reset").addEventListener("click", () => tttInit("---------"));
+  document.getElementById("ttt-reset").addEventListener("click", () => {
+    clearHash();
+    tttInit("---------");
+  });
 
   // ---------- emoji riddle ----------
+
+  const emojiPuzzleInput = document.getElementById("emoji-puzzle");
+  const emojiAnswerInput = document.getElementById("emoji-answer");
 
   function emojiShowCompose() {
     document.getElementById("emoji-compose").classList.remove("hidden");
     document.getElementById("emoji-solve").classList.add("hidden");
-    document.getElementById("emoji-puzzle").value = "";
-    document.getElementById("emoji-answer").value = "";
+    emojiPuzzleInput.value = "";
+    emojiAnswerInput.value = "";
   }
 
-  document.getElementById("emoji-send").addEventListener("click", () => {
-    const puzzle = document.getElementById("emoji-puzzle").value.trim();
-    const answer = document.getElementById("emoji-answer").value.trim();
+  function emojiSubmit() {
+    const puzzle = emojiPuzzleInput.value.trim();
+    const answer = emojiAnswerInput.value.trim();
     if (!puzzle || !answer) {
       toast("Fill in both the riddle and the answer!");
       return;
     }
     const url = `${BASE_URL}#emoji=${enc(puzzle)}.${enc(answer)}`;
     send(`🧩 Emoji Riddle: ${puzzle}\n\nThink you know it? Tap to check 👇`, url);
+  }
+
+  document.getElementById("emoji-send").addEventListener("click", emojiSubmit);
+
+  emojiPuzzleInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") emojiAnswerInput.focus();
+  });
+  emojiAnswerInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") emojiSubmit();
   });
 
   function emojiShowSolve(puzzle, answer) {
@@ -368,7 +463,10 @@
       answerEl.classList.remove("hidden");
       backBtn.classList.remove("hidden");
     };
-    backBtn.onclick = () => emojiShowCompose();
+    backBtn.onclick = () => {
+      clearHash();
+      emojiShowCompose();
+    };
     show("emoji");
   }
 
@@ -384,7 +482,8 @@
 
     const statusEl = document.getElementById("battle-status");
     if (theirScore !== null) {
-      statusEl.textContent = `Your friend scored ${theirScore}/5 on the ${dateKey} battle. Same 5 questions — beat it or eat it. 🔥`;
+      const when = dateKey === todayKey() ? "today's" : `the ${dateKey}`;
+      statusEl.textContent = `Your friend scored ${theirScore}/5 on ${when} battle. Same 5 questions — beat it or eat it. 🔥`;
     } else {
       statusEl.textContent = "Five questions, same for both of you today. Answer honestly — friendship court is in session.";
     }
@@ -399,14 +498,14 @@
       el.className = "battle-q";
       el.innerHTML = `
         <p class="qnum">Question ${n + 1} of 5</p>
-        <p class="qtext">${item.q}</p>
+        <p class="qtext">${esc(item.q)}</p>
         <div class="reveal-wrap">
-          <button class="btn btn-reveal">Reveal answer 👀</button>
-          <p class="answer hidden">${item.a}</p>
+          <button type="button" class="btn btn-reveal">Reveal answer 👀</button>
+          <p class="answer hidden" aria-live="polite">${esc(item.a)}</p>
         </div>
         <div class="score-row hidden">
-          <button class="btn btn-yes">I got it ✅</button>
-          <button class="btn btn-no">Missed it ❌</button>
+          <button type="button" class="btn btn-yes">I got it ✅</button>
+          <button type="button" class="btn btn-no">Missed it ❌</button>
         </div>`;
       const revealBtn = el.querySelector(".btn-reveal");
       revealBtn.addEventListener("click", () => {
@@ -434,12 +533,17 @@
     const arena = document.getElementById("battle-arena");
     const result = document.createElement("div");
     result.className = "battle-result";
+    result.setAttribute("aria-live", "polite");
     if (battleTheirScore !== null) {
       const verdict =
         battleScore > battleTheirScore ? "Victory is yours 👑" :
         battleScore < battleTheirScore ? "Ouch... they got you this time 💀" :
         "Dead tie. The rivalry continues 🤝";
       result.innerHTML = `<p class="big">You ${battleScore} — ${battleTheirScore} Them</p><p>${verdict}</p>`;
+      // An older challenge link? Offer today's fresh set afterwards.
+      if (battleKey !== todayKey()) {
+        document.getElementById("battle-again").classList.remove("hidden");
+      }
     } else {
       result.innerHTML = `<p class="big">${battleScore}/5 🎯</p><p>Now send your score and make them play.</p>`;
     }
@@ -449,11 +553,15 @@
   }
 
   document.getElementById("battle-send").addEventListener("click", () => {
+    const when = battleKey === todayKey() ? "today's questions" : `the ${battleKey} questions`;
     const url = `${BASE_URL}#battle=${battleKey}.${battleScore}`;
-    send(`⚔️ Trivia Battle: I scored ${battleScore}/5 on today's questions. Your turn — tap to play the same set 👇`, url);
+    send(`⚔️ Trivia Battle: I scored ${battleScore}/5 on ${when}. Your turn — tap to play the same set 👇`, url);
   });
 
-  document.getElementById("battle-again").addEventListener("click", () => battleInit(todayKey(), null));
+  document.getElementById("battle-again").addEventListener("click", () => {
+    clearHash();
+    battleInit(todayKey(), null);
+  });
 
   // ---------- hash routing ----------
 
@@ -476,7 +584,7 @@
         show("card");
         return;
       }
-    } else if (kind === "ttt" && /^[xo-]{9}$/.test(val)) {
+    } else if (kind === "ttt" && /^[xo-]{9}$/.test(val) && tttPlausible(val)) {
       tttInit(val);
       show("ttt");
       return;
@@ -493,6 +601,9 @@
         return;
       }
     }
+
+    // Unknown or tampered state: clean the URL and land on today.
+    clearHash();
     show("today");
   }
 

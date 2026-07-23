@@ -41,16 +41,23 @@ class MessagesViewController: MSMessagesAppViewController, WKScriptMessageHandle
 
     override func willBecomeActive(with conversation: MSConversation) {
         super.willBecomeActive(with: conversation)
+        routeToMessage(conversation.selectedMessage)
+    }
 
-        // If the user tapped a Daily5 message bubble, route the web app to
-        // the embedded card/game state.
-        if let messageURL = conversation.selectedMessage?.url,
-           let fragment = messageURL.fragment {
-            var target = URLComponents(url: appURL, resolvingAgainstBaseURL: false)!
-            target.fragment = fragment
-            if let url = target.url {
-                webView.load(URLRequest(url: url))
-            }
+    override func didSelect(_ message: MSMessage, conversation: MSConversation) {
+        super.didSelect(message, conversation: conversation)
+        // The user tapped another Daily5 bubble while the extension was
+        // already open — route to that state too.
+        routeToMessage(message)
+    }
+
+    /// Routes the web app to the card/game state embedded in a tapped bubble.
+    private func routeToMessage(_ message: MSMessage?) {
+        guard let fragment = message?.url?.fragment,
+              var target = URLComponents(url: appURL, resolvingAgainstBaseURL: false) else { return }
+        target.fragment = fragment
+        if let url = target.url {
+            webView.load(URLRequest(url: url))
         }
     }
 

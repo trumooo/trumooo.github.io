@@ -33,7 +33,11 @@ is seeded from the date in `content.js`.
 
 ## Files
 
-- `index.html` / `styles.css` / `script.js` — the app (coral theme 🪸)
+- `index.html` / `styles.css` / `script.js` — the app (coral theme 🪸, with
+  automatic dark mode, reduced-motion support, and screen-reader labels)
 - `content.js` — the content pools; add questions/challenges here anytime
+- `manifest.webmanifest` + `icon-*.png` / `apple-touch-icon.png` — home-screen
+  install support with the coral icon
+- `og-image.png` — the preview card shown when the link is shared
 - `imessage/` — Swift scaffold + guide for shipping this as a real iMessage
   app extension once you're in the Apple Developer Program (see its README)
