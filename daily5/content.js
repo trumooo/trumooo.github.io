@@ -150,6 +150,19 @@ const CONTENT = {
   ],
 };
 
+// Word prompts for Pictionary — drawable things, easy to hard.
+const PICT_WORDS = [
+  "rainbow", "snowman", "taco", "mermaid", "dinosaur", "rocket ship",
+  "birthday cake", "palm tree", "hot air balloon", "jellyfish", "cactus",
+  "disco ball", "pizza slice", "lighthouse", "unicorn", "campfire",
+  "waterfall", "robot", "butterfly", "ice cream cone", "pirate ship",
+  "treehouse", "ferris wheel", "tornado", "sushi", "penguin", "castle",
+  "skateboard", "volcano", "hammock", "scarecrow", "saxophone", "submarine",
+  "cheeseburger", "spider web", "wizard", "igloo", "flamingo",
+  "roller coaster", "telescope", "mailbox", "koala", "surfboard", "banjo",
+  "avocado", "drawbridge", "shooting star", "garden gnome",
+];
+
 // Trivia Battle question sets — 5 per day, drawn from the trivia pool by seed.
 const GAMES = [
   {
@@ -165,6 +178,13 @@ const GAMES = [
     emoji: "🧩",
     players: 2,
     desc: "Write a movie, song, or phrase in pure emoji. They guess, then tap to reveal.",
+  },
+  {
+    id: "pict",
+    name: "Pictionary",
+    emoji: "🎨",
+    players: 2,
+    desc: "Get a word, draw it, send it. They watch it replay, guess, then reveal. No letters allowed!",
   },
   {
     id: "battle",

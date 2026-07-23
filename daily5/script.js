@@ -156,7 +156,7 @@
 
   // ---------- views ----------
 
-  const views = ["today", "games", "card", "ttt", "emoji", "battle"];
+  const views = ["today", "games", "card", "ttt", "emoji", "pict", "battle"];
 
   const VIEW_TITLES = {
     today: "Daily5 🪸 — today's five",
@@ -164,6 +164,7 @@
     card: "Daily5 🪸 — a card for you",
     ttt: "Daily5 🪸 — Tic-Tac-Toe",
     emoji: "Daily5 🪸 — Emoji Riddle",
+    pict: "Daily5 🪸 — Pictionary",
     battle: "Daily5 🪸 — Trivia Battle",
   };
 
@@ -312,6 +313,7 @@
   function openGame(id) {
     if (id === "ttt") { tttInit("---------"); show("ttt"); }
     else if (id === "emoji") { emojiShowCompose(); show("emoji"); }
+    else if (id === "pict") { show("pict"); pictShowCompose(); }
     else if (id === "battle") { battleInit(todayKey(), null); show("battle"); }
   }
 
@@ -487,6 +489,267 @@
     show("emoji");
   }
 
+  // ---------- pictionary ----------
+  // Strokes are captured on a 256x256 normalized grid and packed into
+  // bytes ([count-hi, count-lo, x, y, x, y, ...] per stroke), then
+  // base64url'd into the link — so the whole drawing travels in the URL.
+
+  const PICT_MAX_POINTS = 1200; // keeps the link a sane length for Messages
+  const PICT_INK = "#e8553f";
+  const PICT_PAPER = "#fffdfb";
+
+  let pictStrokes = [];       // finished strokes: arrays of [x, y] in 0-255
+  let pictLive = null;        // stroke currently being drawn
+  let pictPoints = 0;
+  let pictInkWarned = false;
+  let pictSolveStrokes = null;
+  let pictReplayToken = 0;    // invalidates an in-flight replay animation
+
+  const pictCanvas = document.getElementById("pict-canvas");
+  const pictCanvas2 = document.getElementById("pict-canvas2");
+  const pictWordInput = document.getElementById("pict-word");
+
+  function bytesToB64(bytes) {
+    let bin = "";
+    for (let i = 0; i < bytes.length; i += 8192) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    }
+    return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function b64ToBytes(str) {
+    try {
+      const bin = atob(str.replace(/-/g, "+").replace(/_/g, "/"));
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out;
+    } catch {
+      return null;
+    }
+  }
+
+  function encodeStrokes(strokes) {
+    const bytes = [];
+    for (const s of strokes) {
+      bytes.push((s.length >> 8) & 255, s.length & 255);
+      for (const [x, y] of s) bytes.push(x, y);
+    }
+    return bytesToB64(Uint8Array.from(bytes));
+  }
+
+  function decodeStrokes(str) {
+    const bytes = b64ToBytes(str);
+    if (!bytes || !bytes.length) return null;
+    const strokes = [];
+    let i = 0;
+    let total = 0;
+    while (i < bytes.length) {
+      if (i + 2 > bytes.length) return null;
+      const n = (bytes[i] << 8) | bytes[i + 1];
+      i += 2;
+      if (n < 1 || i + n * 2 > bytes.length) return null;
+      total += n;
+      if (total > PICT_MAX_POINTS * 2) return null;
+      const s = [];
+      for (let k = 0; k < n; k++) {
+        s.push([bytes[i], bytes[i + 1]]);
+        i += 2;
+      }
+      strokes.push(s);
+    }
+    return strokes.length ? strokes : null;
+  }
+
+  // Match the canvas backing store to its on-screen size (and dpr).
+  function pictFitCanvas(canvas) {
+    const cssSize = canvas.clientWidth;
+    if (!cssSize) return;
+    const dpr = window.devicePixelRatio || 1;
+    const px = Math.round(cssSize * dpr);
+    if (canvas.width !== px) {
+      canvas.width = px;
+      canvas.height = px;
+    }
+  }
+
+  function pictPaint(canvas, strokes, upToPoints) {
+    pictFitCanvas(canvas);
+    const ctx = canvas.getContext("2d");
+    const size = canvas.width;
+    ctx.fillStyle = PICT_PAPER;
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = PICT_INK;
+    ctx.lineWidth = Math.max(3, size / 90);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const k = size / 256;
+    let budget = upToPoints === undefined ? Infinity : upToPoints;
+    for (const s of strokes) {
+      if (budget <= 0) break;
+      ctx.beginPath();
+      ctx.moveTo(s[0][0] * k, s[0][1] * k);
+      const nPts = Math.min(s.length, Math.max(1, budget));
+      for (let i = 1; i < nPts; i++) ctx.lineTo(s[i][0] * k, s[i][1] * k);
+      if (nPts === 1) ctx.lineTo(s[0][0] * k + 0.001, s[0][1] * k); // a dot
+      ctx.stroke();
+      budget -= s.length;
+    }
+  }
+
+  function pictComposeRepaint() {
+    const all = pictLive ? pictStrokes.concat([pictLive]) : pictStrokes;
+    pictPaint(pictCanvas, all);
+  }
+
+  function pictRandomWord() {
+    return PICT_WORDS[Math.floor(Math.random() * PICT_WORDS.length)];
+  }
+
+  function pictShowCompose() {
+    document.getElementById("pict-compose").classList.remove("hidden");
+    document.getElementById("pict-solve").classList.add("hidden");
+    pictStrokes = [];
+    pictLive = null;
+    pictPoints = 0;
+    pictInkWarned = false;
+    pictReplayToken++;
+    if (!pictWordInput.value.trim()) pictWordInput.value = pictRandomWord();
+    requestAnimationFrame(pictComposeRepaint);
+  }
+
+  function pictPointFromEvent(e) {
+    const rect = pictCanvas.getBoundingClientRect();
+    const x = Math.max(0, Math.min(255, Math.round(((e.clientX - rect.left) / rect.width) * 255)));
+    const y = Math.max(0, Math.min(255, Math.round(((e.clientY - rect.top) / rect.height) * 255)));
+    return [x, y];
+  }
+
+  pictCanvas.addEventListener("pointerdown", (e) => {
+    if (pictPoints >= PICT_MAX_POINTS) return;
+    e.preventDefault();
+    pictCanvas.setPointerCapture(e.pointerId);
+    pictLive = [pictPointFromEvent(e)];
+    pictPoints++;
+    pictComposeRepaint();
+  });
+
+  pictCanvas.addEventListener("pointermove", (e) => {
+    if (!pictLive) return;
+    e.preventDefault();
+    if (pictPoints >= PICT_MAX_POINTS) {
+      if (!pictInkWarned) {
+        pictInkWarned = true;
+        toast("That's a masterpiece — you're out of ink! 🖌️");
+      }
+      return;
+    }
+    const [x, y] = pictPointFromEvent(e);
+    const last = pictLive[pictLive.length - 1];
+    if (Math.hypot(x - last[0], y - last[1]) < 3) return; // thin dense points
+    pictLive.push([x, y]);
+    pictPoints++;
+    pictComposeRepaint();
+  });
+
+  function pictEndStroke() {
+    if (!pictLive) return;
+    pictStrokes.push(pictLive);
+    pictLive = null;
+    pictComposeRepaint();
+  }
+
+  pictCanvas.addEventListener("pointerup", pictEndStroke);
+  pictCanvas.addEventListener("pointercancel", pictEndStroke);
+
+  document.getElementById("pict-dice").addEventListener("click", () => {
+    pictWordInput.value = pictRandomWord();
+  });
+
+  document.getElementById("pict-undo").addEventListener("click", () => {
+    const gone = pictStrokes.pop();
+    if (gone) pictPoints -= gone.length;
+    if (pictPoints < PICT_MAX_POINTS) pictInkWarned = false;
+    pictComposeRepaint();
+  });
+
+  document.getElementById("pict-clear").addEventListener("click", () => {
+    pictStrokes = [];
+    pictLive = null;
+    pictPoints = 0;
+    pictInkWarned = false;
+    pictComposeRepaint();
+  });
+
+  document.getElementById("pict-send").addEventListener("click", () => {
+    const word = pictWordInput.value.trim();
+    if (!word) {
+      toast("Give your drawing a secret word first!");
+      return;
+    }
+    if (!pictStrokes.length) {
+      toast("Draw something first! 🖌️");
+      return;
+    }
+    const url = `${BASE_URL}#draw=${enc(word)}.${encodeStrokes(pictStrokes)}`;
+    send("🎨 Pictionary! I drew something for you... watch it, guess it, then tap to reveal 👇", url);
+  });
+
+  function pictReplay() {
+    if (!pictSolveStrokes) return;
+    const token = ++pictReplayToken;
+    const total = pictSolveStrokes.reduce((n, s) => n + s.length, 0);
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced || total < 2) {
+      pictPaint(pictCanvas2, pictSolveStrokes);
+      return;
+    }
+    const frames = 90; // ~1.5s at 60fps
+    const step = Math.max(1, Math.ceil(total / frames));
+    let shown = 0;
+    (function tick() {
+      if (token !== pictReplayToken) return; // superseded
+      shown = Math.min(total, shown + step);
+      pictPaint(pictCanvas2, pictSolveStrokes, shown);
+      if (shown < total) requestAnimationFrame(tick);
+    })();
+  }
+
+  function pictShowSolve(word, strokes) {
+    show("pict");
+    document.getElementById("pict-compose").classList.add("hidden");
+    document.getElementById("pict-solve").classList.remove("hidden");
+    pictSolveStrokes = strokes;
+    const revealBtn = document.getElementById("pict-reveal");
+    const wordEl = document.getElementById("pict-word-text");
+    const backBtn = document.getElementById("pict-back-atcha");
+    revealBtn.classList.remove("hidden");
+    wordEl.classList.add("hidden");
+    wordEl.textContent = `It's... ${word}!`;
+    backBtn.classList.add("hidden");
+    revealBtn.onclick = () => {
+      revealBtn.classList.add("hidden");
+      wordEl.classList.remove("hidden");
+      backBtn.classList.remove("hidden");
+    };
+    backBtn.onclick = () => {
+      clearHash();
+      pictWordInput.value = "";
+      pictShowCompose();
+    };
+    requestAnimationFrame(pictReplay);
+  }
+
+  document.getElementById("pict-replay").addEventListener("click", pictReplay);
+
+  window.addEventListener("resize", () => {
+    if (document.getElementById("view-pict").classList.contains("hidden")) return;
+    if (pictSolveStrokes && !document.getElementById("pict-solve").classList.contains("hidden")) {
+      pictPaint(pictCanvas2, pictSolveStrokes);
+    } else {
+      pictComposeRepaint();
+    }
+  });
+
   // ---------- trivia battle ----------
 
   let battleKey, battleScore, battleAnswered, battleTheirScore;
@@ -610,6 +873,13 @@
       const puzzle = dec(p);
       const answer = dec(a || "");
       if (puzzle && answer) { emojiShowSolve(puzzle, answer); return; }
+    } else if (kind === "draw") {
+      const dot = val.indexOf(".");
+      if (dot > 0) {
+        const word = dec(val.slice(0, dot));
+        const strokes = decodeStrokes(val.slice(dot + 1));
+        if (word && word.trim() && strokes) { pictShowSolve(word.trim(), strokes); return; }
+      }
     } else if (kind === "battle") {
       const m = val.match(/^(\d{4}-\d{2}-\d{2})\.([0-5])$/);
       if (m) {

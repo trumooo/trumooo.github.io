@@ -117,6 +117,51 @@
         </div>
       </section>
 
+      <!-- Pictionary -->
+      <section id="view-pict" class="view hidden" aria-label="Pictionary">
+        <button type="button" class="back-btn" data-back>← back</button>
+        <div class="game-head">
+          <h2>🎨 Pictionary</h2>
+          <span class="players-badge">👥 2 players</span>
+        </div>
+
+        <div id="pict-compose">
+          <p class="game-status">Draw your word below — no letters, no numbers! They'll watch it appear and guess.</p>
+          <div class="word-row">
+            <label class="field">
+              <span>Your word (hidden until they reveal)</span>
+              <input id="pict-word" type="text" maxlength="24" autocomplete="off" enterkeyhint="done" />
+            </label>
+            <button type="button" class="btn-dice" id="pict-dice" aria-label="Shuffle to a new random word">🎲</button>
+          </div>
+          <div class="pict-canvas-wrap">
+            <canvas class="pict-canvas" id="pict-canvas" aria-label="Drawing canvas — draw with your finger or mouse"></canvas>
+          </div>
+          <div class="pict-toolbar">
+            <button type="button" class="btn btn-ghost" id="pict-undo">↩️ Undo</button>
+            <button type="button" class="btn btn-ghost" id="pict-clear">🧽 Clear</button>
+          </div>
+          <div class="game-actions">
+            <button type="button" class="btn btn-primary" id="pict-send">Send drawing 📨</button>
+          </div>
+        </div>
+
+        <div id="pict-solve" class="hidden">
+          <p class="game-status">Your friend drew this masterpiece. What is it?!</p>
+          <div class="pict-canvas-wrap">
+            <canvas class="pict-canvas" id="pict-canvas2" aria-label="Your friend's drawing"></canvas>
+          </div>
+          <div class="reveal-wrap pict-reveal-wrap">
+            <button type="button" class="btn btn-reveal" id="pict-reveal">Tap to reveal the word 👀</button>
+            <p class="answer hidden" id="pict-word-text" aria-live="polite"></p>
+          </div>
+          <div class="game-actions">
+            <button type="button" class="btn btn-ghost" id="pict-replay">Watch it again ▶️</button>
+            <button type="button" class="btn btn-primary hidden" id="pict-back-atcha">Draw one back 🎨</button>
+          </div>
+        </div>
+      </section>
+
       <!-- Trivia Battle -->
       <section id="view-battle" class="view hidden" aria-label="Trivia Battle">
         <button type="button" class="back-btn" data-back>← back</button>

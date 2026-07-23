@@ -517,6 +517,58 @@ button, input { touch-action: manipulation; }
   word-break: break-word;
 }
 
+/* pictionary */
+.word-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+
+.word-row .field { flex: 1; margin-bottom: 0; }
+
+.btn-dice {
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  font-size: 1.5rem;
+  background: var(--card);
+  border: 2px solid var(--peach);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.btn-dice:active { transform: rotate(-20deg) scale(0.92); }
+
+.pict-canvas-wrap {
+  background: #fffdfb;
+  border: 2px solid var(--peach);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.pict-canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#pict-canvas2 { cursor: default; }
+
+.pict-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pict-toolbar .btn { flex: 1; }
+
+.pict-reveal-wrap { margin-top: 14px; }
+
 /* trivia battle */
 .battle-q {
   background: var(--card);

@@ -24,6 +24,9 @@ with a link that opens straight to the question + reveal button.
   a move, send it, they tap and move back.
 - 🧩 **Emoji Riddle** · 2 players — write a riddle + hidden answer, they
   guess then reveal.
+- 🎨 **Pictionary** · 2 players — get a random word, draw it on the canvas,
+  send it; they watch the drawing replay stroke by stroke, guess, then
+  reveal. The whole drawing travels inside the link as packed stroke data.
 - ⚔️ **Trivia Battle** · 2 players — same 5 daily questions for both; the
   link carries your score and the date, so they play the exact same set and
   get a head-to-head result.
