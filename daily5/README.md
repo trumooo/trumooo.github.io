@@ -28,18 +28,20 @@ or accept a photo challenge. Opening a reply shows their pick starred,
 their answer quoted, or their result bannered — and you can respond right
 back.
 
-**Games** (player count on every card, GamePigeon-style):
+**Games** — a GamePigeon-style tile grid: tapping a tile IS the action.
+Challenge games (📨) fire the game message immediately and the recipient
+takes the first turn; compose games (✏️) open a quick setup first, then
+send. Open games take the full screen. Player count is on every tile.
 
-- ⭕ **Tic-Tac-Toe** · 2 players — the whole board travels in the link; make
-  a move, send it, they tap and move back.
-- 🧩 **Emoji Riddle** · 2 players — write a riddle + hidden answer, they
-  guess then reveal.
-- 🎨 **Pictionary** · 2 players — get a random word, draw it on the canvas,
-  send it; they watch the drawing replay stroke by stroke, guess, then
-  reveal. The whole drawing travels inside the link as packed stroke data.
-- ⚔️ **Trivia Battle** · 2 players — same 5 daily questions for both; the
-  link carries your score and the date, so they play the exact same set and
-  get a head-to-head result.
+- ⭕ **Tic-Tac-Toe** · 2P — tap to challenge; they make the opening move
+  and the board ping-pongs through the links.
+- 🧩 **Emoji Riddle** · 2P — write a riddle + hidden answer, they guess
+  then reveal.
+- 🎨 **Pictionary** · 2P — five brush colors, a 60-second clock that
+  starts on your first stroke, and the whole drawing travels in the link;
+  they watch it replay stroke by stroke, guess, then reveal.
+- ⚔️ **Trivia Battle** · 2P — tap to challenge, then play your own round;
+  same 5 date-pinned questions for both, head-to-head result on their end.
 
 No backend, no accounts: all state lives in the URL hash, all daily content
 is seeded from the date in `content.js`.

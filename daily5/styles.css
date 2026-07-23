@@ -515,20 +515,25 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
 
 /* ---------- games ---------- */
 
+/* GamePigeon-style tile grid: tap a tile, the game message goes out. */
+#game-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
 .game-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px 14px;
+  gap: 6px;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 16px;
-  margin-bottom: 14px;
+  padding: 20px 10px 14px;
   cursor: pointer;
   border: 2px solid transparent;
-  width: 100%;
-  text-align: left;
+  text-align: center;
   font-family: inherit;
   color: inherit;
   user-select: none;
@@ -537,61 +542,43 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
 }
 
 .game-card:hover { border-color: var(--coral-soft); }
-.game-card:active { transform: scale(0.98); }
+.game-card:active { transform: scale(0.96); }
 
-.game-emoji {
-  font-size: 2rem;
-  background: var(--peach);
-  border-radius: 16px;
-  width: 58px;
-  height: 58px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.tile-emoji {
+  font-size: 2.8rem;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
-.game-info { flex: 1; min-width: 160px; }
-
-.game-info h3 {
-  font-family: "Baloo 2", sans-serif;
-  font-size: 1.15rem;
-  color: var(--ink);
-}
-
-.game-info p {
-  color: var(--ink-soft);
-  font-size: 0.86rem;
-  font-weight: 600;
-  line-height: 1.35;
-  margin-top: 2px;
-}
-
-.game-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.btn-invite {
+.tile-name {
   font-family: "Baloo 2", sans-serif;
   font-weight: 700;
-  font-size: 0.85rem;
-  background: var(--card);
-  color: var(--coral-deep);
-  border: 2px solid var(--coral);
-  border-radius: 999px;
-  padding: 7px 16px;
-  min-height: 36px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: transform 0.12s ease;
+  font-size: 1.02rem;
+  color: var(--ink);
+  line-height: 1.15;
 }
 
-.btn-invite:active { transform: scale(0.94); }
-.btn-invite:disabled { cursor: default; }
+.tile-badge {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  background: var(--coral);
+  color: #fff;
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+.tile-hint {
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.72rem;
+}
+
+/* An open game takes the whole screen, GamePigeon-style. */
+.in-game .header,
+.in-game .tabs { display: none; }
+.in-game .app { padding-top: 14px; }
 
 .players-badge {
   display: inline-block;

@@ -434,9 +434,13 @@
     battle: "Daily5 🪸 — Trivia Battle",
   };
 
+  const GAME_VIEWS = new Set(["ttt", "emoji", "pict", "battle"]);
+
   function show(name) {
     views.forEach((v) => document.getElementById("view-" + v).classList.toggle("hidden", v !== name));
     document.getElementById("tabs").classList.toggle("hidden", name === "card");
+    // GamePigeon-style: an open game takes the whole screen.
+    document.body.classList.toggle("in-game", GAME_VIEWS.has(name));
     document.querySelectorAll(".tab").forEach((t) => {
       t.classList.toggle("active", t.dataset.tab === name);
     });
@@ -733,46 +737,46 @@
 
   // ---------- games list ----------
 
-  // "Let's play!" without composing first — the GamePigeon move. The link
-  // drops the recipient straight into the game (their turn / their canvas).
-  function sendInvite(g, btn) {
+  // GamePigeon flow: tapping a tile IS the action. Challenge games fire the
+  // game message immediately (the recipient takes the first turn); compose
+  // games open their quick setup first, then send.
+  async function gameAction(g) {
+    if (g.kind === "compose") {
+      openGame(g.id);
+      return;
+    }
     let url = `${BASE_URL}#g=${g.id}`;
     if (g.id === "battle") url += "." + (deckKey || todayKey()); // same question set for both
-    sendFromButton(btn, g.invite, url, null, IN_IMESSAGE ? bubbleForInvite(g) : null);
+    const outcome = await send(g.invite, url, IN_IMESSAGE ? bubbleForInvite(g) : null);
+    if (outcome !== "sent" && outcome !== "copied") return;
+    if (g.id === "battle") {
+      // Anagrams-style: both players run the same board — play your round now.
+      battleInit(deckKey || todayKey(), null);
+      show("battle");
+      document.getElementById("battle-status").textContent =
+        "Challenge sent! 🎯 Now play your round — then send your score.";
+    } else {
+      toast("Challenge sent — their move first 😏");
+    }
   }
 
   function renderGames() {
     const list = document.getElementById("game-list");
     list.innerHTML = "";
     GAMES.forEach((g) => {
-      const el = document.createElement("div");
+      const el = document.createElement("button");
+      el.type = "button";
       el.className = "game-card";
-      el.setAttribute("role", "button");
-      el.setAttribute("tabindex", "0");
-      el.setAttribute("aria-label", `Play ${g.name}`);
+      el.setAttribute(
+        "aria-label",
+        g.kind === "compose" ? `Set up ${g.name} to send` : `Challenge a friend to ${g.name}`
+      );
       el.innerHTML = `
-        <div class="game-emoji" aria-hidden="true">${g.emoji}</div>
-        <div class="game-info">
-          <h3>${esc(g.name)}</h3>
-          <p>${esc(g.desc)}</p>
-        </div>
-        <div class="game-side">
-          <span class="players-badge">👥 ${g.players} players</span>
-          <button type="button" class="btn-invite">Invite 📨</button>
-        </div>`;
-      el.addEventListener("click", () => openGame(g.id));
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          openGame(g.id);
-        }
-      });
-      const inviteBtn = el.querySelector(".btn-invite");
-      inviteBtn.setAttribute("aria-label", `Invite a friend to ${g.name}`);
-      inviteBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        sendInvite(g, inviteBtn);
-      });
+        <span class="tile-emoji" aria-hidden="true">${g.emoji}</span>
+        <span class="tile-name">${esc(g.name)}</span>
+        <span class="tile-badge">👥 ${g.players}P</span>
+        <span class="tile-hint">${g.kind === "compose" ? "✏️" : "📨"} ${esc(g.tileHint)}</span>`;
+      el.addEventListener("click", () => gameAction(g));
       list.appendChild(el);
     });
   }
