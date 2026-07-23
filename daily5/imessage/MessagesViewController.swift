@@ -51,6 +51,14 @@ class MessagesViewController: MSMessagesAppViewController, WKScriptMessageHandle
         routeToMessage(message)
     }
 
+    /// Decodes a "data:image/png;base64,..." string from the web app.
+    private func decodeDataURL(_ dataURL: String?) -> UIImage? {
+        guard let dataURL = dataURL,
+              let comma = dataURL.range(of: "base64,"),
+              let data = Data(base64Encoded: String(dataURL[comma.upperBound...])) else { return nil }
+        return UIImage(data: data)
+    }
+
     /// Routes the web app to the card/game state embedded in a tapped bubble.
     private func routeToMessage(_ message: MSMessage?) {
         guard let fragment = message?.url?.fragment,
@@ -73,7 +81,10 @@ class MessagesViewController: MSMessagesAppViewController, WKScriptMessageHandle
         let layout = MSMessageTemplateLayout()
         layout.caption = text
         layout.subcaption = "Daily5 🪸"
-        layout.image = UIImage(named: "MessageCard") // 300x300 coral card in the asset catalog
+        // The web app renders the live state (board, drawing, score) to a PNG
+        // data URL so the bubble previews the actual game, GamePigeon-style.
+        // The static coral card is only the fallback.
+        layout.image = decodeDataURL(body["image"] as? String) ?? UIImage(named: "MessageCard")
 
         let msg = MSMessage(session: MSSession())
         msg.layout = layout

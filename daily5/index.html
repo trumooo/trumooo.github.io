@@ -49,6 +49,10 @@
       <!-- Today's five cards -->
       <section id="view-today" class="view" aria-label="Today's five cards">
         <p class="hint">Pick your favorites and send them to your person 💌</p>
+        <div class="deck-notice hidden" id="deck-notice" role="status">
+          <span>🌏 Showing <strong id="deck-notice-date"></strong> — your friend's today, synced so you see the same five.</span>
+          <button type="button" class="notice-btn" id="deck-today-btn">See my today →</button>
+        </div>
         <div id="deck"></div>
       </section>
 

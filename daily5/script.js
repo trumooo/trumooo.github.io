@@ -97,19 +97,44 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch { /* best effort */ } },
   };
 
-  function sentSet() {
-    try { return new Set(JSON.parse(store.get("daily5-sent-" + todayKey()) || "[]")); }
+  function sentSet(dateKey) {
+    try { return new Set(JSON.parse(store.get("daily5-sent-" + dateKey) || "[]")); }
     catch { return new Set(); }
   }
 
-  function markSent(type, idx) {
-    const set = sentSet();
+  function markSent(type, idx, dateKey) {
+    const set = sentSet(dateKey);
     set.add(type + "." + idx);
-    store.set("daily5-sent-" + todayKey(), JSON.stringify([...set]));
+    store.set("daily5-sent-" + dateKey, JSON.stringify([...set]));
   }
 
-  function isSent(type, idx) {
-    return sentSet().has(type + "." + idx);
+  function isSent(type, idx, dateKey) {
+    return sentSet(dateKey).has(type + "." + idx);
+  }
+
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  function dateKeyToDate(dateKey) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  // Is this dateKey within N days of the local today? Used to decide whether
+  // a link from a friend should pin the deck to their day (timezones put
+  // friends at most one calendar day apart; anything further is a stale link).
+  function withinDays(dateKey, days) {
+    if (!DATE_RE.test(dateKey)) return false;
+    const t = dateKeyToDate(dateKey).getTime();
+    if (isNaN(t)) return false;
+    return Math.abs(t - dateKeyToDate(todayKey()).getTime()) <= days * 86400000;
+  }
+
+  function formatDateKey(dateKey) {
+    return dateKeyToDate(dateKey).toLocaleDateString(undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    });
   }
 
   // A tiny haptic tick on devices that support it (no-op elsewhere).
@@ -150,15 +175,18 @@
   let sendInFlight = false;
 
   // Resolves to "sent" | "copied" | "aborted" | "failed" | "busy".
-  async function send(text, url) {
+  async function send(text, url, image) {
     if (sendInFlight) return "busy";
     sendInFlight = true;
     try {
       const full = url ? `${text}\n\n${url}` : text;
 
-      // Inside the iMessage extension the native side inserts an MSMessage.
+      // Inside the iMessage extension the native side inserts an MSMessage;
+      // `image` (a PNG data URL of the live game state) becomes the bubble art.
       if (IN_IMESSAGE) {
-        window.webkit.messageHandlers.daily5.postMessage({ text, url: url || BASE_URL });
+        const payload = { text, url: url || BASE_URL };
+        if (image) payload.image = image;
+        window.webkit.messageHandlers.daily5.postMessage(payload);
         return "sent";
       }
       if (navigator.share) {
@@ -184,8 +212,8 @@
   }
 
   // Send + flash "Sent ✓" on the button, then restore (or swap) its label.
-  async function sendFromButton(btn, text, url, restoreLabel) {
-    const outcome = await send(text, url);
+  async function sendFromButton(btn, text, url, restoreLabel, image) {
+    const outcome = await send(text, url, image);
     if (outcome === "sent" || outcome === "copied") {
       const orig = restoreLabel || btn.textContent;
       btn.textContent = "Sent ✓";
@@ -196,6 +224,164 @@
       }, 1600);
     }
     return outcome;
+  }
+
+  // ---------- bubble images (iMessage extension) ----------
+  // Rendered previews of the live state, so the Messages bubble shows the
+  // actual board / drawing / score before anyone taps it (GamePigeon-style).
+  // Only generated inside the extension; browsers use the share sheet.
+
+  function bubbleBase() {
+    const c = document.createElement("canvas");
+    c.width = 600;
+    c.height = 400;
+    const ctx = c.getContext("2d");
+    const g = ctx.createLinearGradient(0, 0, 600, 400);
+    g.addColorStop(0, "#fff6f1");
+    g.addColorStop(1, "#ffe1d6");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 600, 400);
+    ctx.font = "30px sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText("🪸", 16, 388);
+    return [c, ctx];
+  }
+
+  // JPEG keeps the gradient backgrounds ~5-10x smaller than PNG would be.
+  function bubbleExport(c) {
+    return c.toDataURL("image/jpeg", 0.85);
+  }
+
+  function bubbleRoundRect(ctx, x, y, w, h, r) {
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+    } else {
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+    }
+  }
+
+  function bubbleWrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+    const words = String(text).split(" ");
+    let line = "";
+    let lines = 0;
+    for (let i = 0; i < words.length; i++) {
+      const test = line ? line + " " + words[i] : words[i];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines++;
+        if (lines === maxLines) {
+          ctx.fillText(line + "…", x, y);
+          return;
+        }
+        ctx.fillText(line, x, y);
+        y += lineHeight;
+        line = words[i];
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, x, y);
+  }
+
+  function bubbleForCard(type, idx) {
+    const meta = CARD_META[type];
+    const [c, ctx] = bubbleBase();
+    ctx.textAlign = "center";
+    ctx.font = "60px sans-serif";
+    ctx.fillText(meta.emoji, 300, 92);
+    ctx.fillStyle = "#c73e2b";
+    ctx.font = '700 26px "Baloo 2", "Nunito", sans-serif';
+    ctx.fillText(meta.label.toUpperCase(), 300, 136);
+    ctx.fillStyle = "#43241b";
+    ctx.font = '700 32px "Nunito", sans-serif';
+    let text;
+    if (type === "trivia") text = CONTENT.trivia[idx].q;
+    else if (type === "thisOrThat") text = CONTENT.thisOrThat[idx].join("  vs  ");
+    else text = CONTENT[type][idx];
+    bubbleWrapText(ctx, text, 300, 194, 520, 42, 5);
+    return bubbleExport(c);
+  }
+
+  function bubbleForTtt(board) {
+    const [c, ctx] = bubbleBase();
+    const cell = 104, gap = 12;
+    const bs = cell * 3 + gap * 2;
+    const ox = (600 - bs) / 2, oy = (400 - bs) / 2;
+    for (let i = 0; i < 9; i++) {
+      const x = ox + (i % 3) * (cell + gap);
+      const y = oy + Math.floor(i / 3) * (cell + gap);
+      ctx.fillStyle = "#ffffff";
+      bubbleRoundRect(ctx, x, y, cell, cell, 18);
+      ctx.fill();
+      ctx.strokeStyle = "#ffd9cc";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      if (board[i] !== "-") {
+        ctx.font = "62px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(board[i] === "x" ? "❌" : "⭕", x + cell / 2, y + cell / 2 + 4);
+      }
+    }
+    return bubbleExport(c);
+  }
+
+  function bubbleForEmoji(puzzle) {
+    const [c, ctx] = bubbleBase();
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#43241b";
+    let px = 96;
+    ctx.font = `${px}px sans-serif`;
+    while (px > 34 && ctx.measureText(puzzle).width > 540) {
+      px -= 6;
+      ctx.font = `${px}px sans-serif`;
+    }
+    ctx.fillText(puzzle, 300, 210);
+    ctx.fillStyle = "#c73e2b";
+    ctx.font = '700 28px "Baloo 2", "Nunito", sans-serif';
+    ctx.fillText("EMOJI RIDDLE — GUESS IT!", 300, 330);
+    return bubbleExport(c);
+  }
+
+  function bubbleForBattle(score) {
+    const [c, ctx] = bubbleBase();
+    ctx.textAlign = "center";
+    ctx.font = "64px sans-serif";
+    ctx.fillText("⚔️", 300, 104);
+    ctx.fillStyle = "#e8553f";
+    ctx.font = '800 104px "Baloo 2", "Nunito", sans-serif';
+    ctx.fillText(`${score}/5`, 300, 244);
+    ctx.fillStyle = "#7a4a3d";
+    ctx.font = '700 30px "Nunito", sans-serif';
+    ctx.fillText("Trivia Battle — your turn!", 300, 320);
+    return bubbleExport(c);
+  }
+
+  function bubbleForPict(strokes) {
+    const [c, ctx] = bubbleBase();
+    const size = 360;
+    const ox = (600 - size) / 2, oy = (400 - size) / 2;
+    ctx.fillStyle = "#fffdfb";
+    bubbleRoundRect(ctx, ox, oy, size, size, 24);
+    ctx.fill();
+    ctx.strokeStyle = "#ffd9cc";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.strokeStyle = "#e8553f";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    const k = size / 256;
+    for (const s of strokes) {
+      ctx.beginPath();
+      ctx.moveTo(ox + s[0][0] * k, oy + s[0][1] * k);
+      for (let i = 1; i < s.length; i++) ctx.lineTo(ox + s[i][0] * k, oy + s[i][1] * k);
+      if (s.length === 1) ctx.lineTo(ox + s[0][0] * k + 0.001, oy + s[0][1] * k);
+      ctx.stroke();
+    }
+    return bubbleExport(c);
   }
 
   // ---------- views ----------
@@ -249,12 +435,13 @@
     wildcard: { badge: "badge-wildcard", label: "Wildcard", emoji: "🎲" },
   };
 
-  function buildCard(type, idx) {
+  function buildCard(type, idx, forDate) {
     const meta = CARD_META[type];
     const card = document.createElement("div");
     card.className = "card";
 
-    const wasSent = isSent(type, idx);
+    const cardDate = forDate || todayKey();
+    const wasSent = isSent(type, idx, cardDate);
     const top = document.createElement("div");
     top.className = "card-top";
     top.innerHTML =
@@ -266,7 +453,8 @@
     card.appendChild(top);
 
     let shareText;
-    const shareUrl = `${BASE_URL}#c=${type}.${idx}`;
+    // The date rides along so the recipient's deck can sync to this day.
+    const shareUrl = `${BASE_URL}#c=${type}.${idx}.${cardDate}`;
 
     if (type === "trivia") {
       const item = CONTENT.trivia[idx];
@@ -309,9 +497,10 @@
     sendBtn.className = "btn btn-primary";
     sendBtn.textContent = wasSent ? "Send again 📨" : "Send this one 📨";
     sendBtn.addEventListener("click", async () => {
-      const outcome = await sendFromButton(sendBtn, shareText, shareUrl, "Send again 📨");
+      const image = IN_IMESSAGE ? bubbleForCard(type, idx) : null;
+      const outcome = await sendFromButton(sendBtn, shareText, shareUrl, "Send again 📨", image);
       if (outcome === "sent" || outcome === "copied") {
-        markSent(type, idx);
+        markSent(type, idx, cardDate);
         card.querySelector(".sent-chip").classList.remove("hidden");
       }
     });
@@ -320,30 +509,41 @@
     return card;
   }
 
-  let renderedDeckKey = null;
+  let deckKey = null;      // the date whose five cards are on screen
+  let deckPinned = false;  // true when a friend's link pinned us to their day
 
-  function renderDeck() {
-    const key = todayKey();
-    renderedDeckKey = key;
+  function renderDeck(overrideKey) {
+    const key = overrideKey && withinDays(overrideKey, 2) ? overrideKey : todayKey();
+    deckKey = key;
+    deckPinned = key !== todayKey();
     const picks = dailyPicks(key);
     const deck = document.getElementById("deck");
     deck.innerHTML = "";
-    deck.appendChild(buildCard("trivia", picks.trivia));
-    deck.appendChild(buildCard("qotd", picks.qotd));
-    deck.appendChild(buildCard("challenge", picks.challenge));
-    deck.appendChild(buildCard("thisOrThat", picks.thisOrThat));
-    deck.appendChild(buildCard("wildcard", picks.wildcard));
+    deck.appendChild(buildCard("trivia", picks.trivia, key));
+    deck.appendChild(buildCard("qotd", picks.qotd, key));
+    deck.appendChild(buildCard("challenge", picks.challenge, key));
+    deck.appendChild(buildCard("thisOrThat", picks.thisOrThat, key));
+    deck.appendChild(buildCard("wildcard", picks.wildcard, key));
 
-    document.getElementById("date-chip").textContent = new Date().toLocaleDateString(undefined, {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
+    document.getElementById("date-chip").textContent = formatDateKey(key);
+
+    // Cross-timezone pairs: when a friend's link pinned us to their calendar
+    // day, say so and offer the way back.
+    document.getElementById("deck-notice").classList.toggle("hidden", !deckPinned);
+    if (deckPinned) {
+      document.getElementById("deck-notice-date").textContent = formatDateKey(key);
+    }
   }
 
-  // A tab left open overnight gets fresh cards when it wakes up.
+  document.getElementById("deck-today-btn").addEventListener("click", () => {
+    clearHash();
+    renderDeck();
+  });
+
+  // A tab left open overnight gets fresh cards when it wakes up
+  // (unless a friend's link pinned the deck to their day).
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && renderedDeckKey !== todayKey()) renderDeck();
+    if (!document.hidden && !deckPinned && deckKey !== todayKey()) renderDeck();
   });
 
   // ---------- games list ----------
@@ -492,7 +692,7 @@
     if (win) text = "⭕ Tic-Tac-Toe: that's game!! Tap to see the final board 🏆";
     else if (!state.includes("-")) text = "⭕ Tic-Tac-Toe: it's a draw. We're too evenly matched 🤝";
     else text = "⭕ Tic-Tac-Toe: your move! Tap to play 👇";
-    sendFromButton(e.currentTarget, text, url);
+    sendFromButton(e.currentTarget, text, url, null, IN_IMESSAGE ? bubbleForTtt(state) : null);
   });
 
   document.getElementById("ttt-reset").addEventListener("click", () => {
@@ -523,7 +723,9 @@
     sendFromButton(
       document.getElementById("emoji-send"),
       `🧩 Emoji Riddle: ${puzzle}\n\nThink you know it? Tap to check 👇`,
-      url
+      url,
+      null,
+      IN_IMESSAGE ? bubbleForEmoji(puzzle) : null
     );
   }
 
@@ -776,7 +978,9 @@
     sendFromButton(
       document.getElementById("pict-send"),
       "🎨 Pictionary! I drew something for you... watch it, guess it, then tap to reveal 👇",
-      url
+      url,
+      null,
+      IN_IMESSAGE ? bubbleForPict(pictStrokes) : null
     );
   });
 
@@ -934,7 +1138,13 @@
   document.getElementById("battle-send").addEventListener("click", (e) => {
     const when = battleKey === todayKey() ? "today's questions" : `the ${battleKey} questions`;
     const url = `${BASE_URL}#battle=${battleKey}.${battleScore}`;
-    sendFromButton(e.currentTarget, `⚔️ Trivia Battle: I scored ${battleScore}/5 on ${when}. Your turn — tap to play the same set 👇`, url);
+    sendFromButton(
+      e.currentTarget,
+      `⚔️ Trivia Battle: I scored ${battleScore}/5 on ${when}. Your turn — tap to play the same set 👇`,
+      url,
+      null,
+      IN_IMESSAGE ? bubbleForBattle(battleScore) : null
+    );
   });
 
   document.getElementById("battle-again").addEventListener("click", () => {
@@ -953,13 +1163,19 @@
     const val = eq === -1 ? "" : hash.slice(eq + 1);
 
     if (kind === "c") {
-      const [type, idxStr] = val.split(".");
+      const [type, idxStr, linkDate] = val.split(".");
       const idx = parseInt(idxStr, 10);
       const pool = CONTENT[type];
       if (pool && idx >= 0 && idx < pool.length) {
+        // A dated link from a friend in a nearby calendar day pins the deck
+        // to their day, so both of you look at the same five cards. Links
+        // without a nearby date (stale or legacy) reset any earlier pin.
+        const validDate = linkDate && withinDays(linkDate, 2) ? linkDate : null;
+        const target = validDate || todayKey();
+        if (target !== deckKey) renderDeck(target);
         const holder = document.getElementById("single-card");
         holder.innerHTML = "";
-        holder.appendChild(buildCard(type, idx));
+        holder.appendChild(buildCard(type, idx, validDate || todayKey()));
         show("card");
         return;
       }
@@ -982,6 +1198,8 @@
     } else if (kind === "battle") {
       const m = val.match(/^(\d{4}-\d{2}-\d{2})\.([0-5])$/);
       if (m) {
+        const target = withinDays(m[1], 2) ? m[1] : todayKey();
+        if (target !== deckKey) renderDeck(target);
         battleInit(m[1], parseInt(m[2], 10));
         show("battle");
         return;

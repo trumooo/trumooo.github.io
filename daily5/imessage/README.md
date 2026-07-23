@@ -10,9 +10,14 @@ native extension is just a thin `WKWebView` shell around it:
 
 1. The extension loads the web app with `?imsg=1`.
 2. When that flag is present, every "Send" button in the web app posts
-   `{ text, url }` to the native side instead of opening a share sheet.
+   `{ text, url, image }` to the native side instead of opening a share
+   sheet — `image` is a JPEG data URL of the live state (the tic-tac-toe
+   board, the Pictionary drawing, the battle score) rendered by the web
+   app, so the bubble previews the actual game GamePigeon-style.
 3. `MessagesViewController.swift` receives it and inserts an `MSMessage`
-   bubble into the conversation, with the state-carrying URL attached.
+   bubble into the conversation, with the state-carrying URL attached and
+   the rendered image as the bubble art (the static `MessageCard` asset is
+   only a fallback).
 4. When the recipient taps the bubble, `willBecomeActive(with:)` reads the
    URL fragment and routes the web app straight to that card or game state
    (tic-tac-toe board, riddle, trivia battle score, etc.). If the recipient
@@ -55,6 +60,9 @@ pushing to GitHub Pages — no App Store re-review needed for content changes.
 
 - `MSSession` is already used, so consecutive moves in one game collapse
   into a single updating bubble (like GamePigeon) instead of stacking.
-- Generate the bubble image dynamically (render the current tic-tac-toe
-  board into `layout.image`) so the board is visible before tapping.
+- Live bubble images are already wired end-to-end (web renders, native
+  decodes) — nothing extra needed there.
 - Add a compact-mode picker UI natively for faster card selection.
+- Route `navigator.vibrate`-style haptics through a `{haptic:"light"}`
+  bridge message to `UIImpactFeedbackGenerator` (iOS web views ignore the
+  web vibration API).
