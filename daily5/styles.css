@@ -752,7 +752,8 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px 10px;
   margin-bottom: 10px;
 }
 
@@ -940,6 +941,8 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
   .tab { font-size: 0.9rem; }
   .tot-option { font-size: 0.9rem; padding: 12px 8px; }
   .score-row { flex-direction: column; }
+  .color-dot { width: 28px; height: 28px; }
+  .pict-colors { gap: 6px; }
 }
 
 /* compact layout inside the Messages drawer (?imsg=1) */
