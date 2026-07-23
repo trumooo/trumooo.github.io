@@ -1,0 +1,524 @@
+/* ---------- Daily5 · coral theme ---------- */
+
+:root {
+  --coral: #ff7059;
+  --coral-deep: #e8553f;
+  --coral-dark: #c73e2b;
+  --coral-soft: #ffb4a2;
+  --peach: #ffd9cc;
+  --cream: #fff6f1;
+  --card: #ffffff;
+  --ink: #43241b;
+  --ink-soft: #8a5d51;
+  --teal: #2ec4b6;
+  --gold: #ffbf47;
+  --shadow: 0 6px 18px rgba(199, 62, 43, 0.14);
+  --radius: 22px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: "Nunito", -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--cream);
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(255, 180, 162, 0.35) 0, transparent 28%),
+    radial-gradient(circle at 88% 20%, rgba(255, 191, 71, 0.18) 0, transparent 30%),
+    radial-gradient(circle at 80% 90%, rgba(255, 112, 89, 0.14) 0, transparent 35%);
+  color: var(--ink);
+  min-height: 100vh;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 18px 40px;
+}
+
+/* ---------- header ---------- */
+
+.header { text-align: center; margin-bottom: 18px; }
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.logo-coral { font-size: 2rem; }
+
+.header h1 {
+  font-family: "Baloo 2", "Nunito", sans-serif;
+  font-weight: 800;
+  font-size: 2.6rem;
+  letter-spacing: -0.02em;
+  color: var(--coral-deep);
+}
+
+.logo-five {
+  display: inline-block;
+  background: var(--coral);
+  color: #fff;
+  border-radius: 14px;
+  padding: 0 12px;
+  margin-left: 4px;
+  transform: rotate(-4deg);
+  box-shadow: var(--shadow);
+}
+
+.tagline {
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.date-chip {
+  display: inline-block;
+  margin-top: 10px;
+  background: #fff;
+  border: 2px solid var(--peach);
+  color: var(--coral-deep);
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 5px 14px;
+}
+
+/* ---------- tabs ---------- */
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 217, 204, 0.55);
+  padding: 6px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+}
+
+.tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--ink-soft);
+  padding: 10px 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.tab.active {
+  background: var(--coral);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+/* ---------- views / cards ---------- */
+
+.hidden { display: none !important; }
+
+.hint {
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 18px 16px;
+  margin-bottom: 16px;
+  border: 2px solid transparent;
+  transition: transform 0.15s ease;
+}
+
+.card:active { transform: scale(0.99); }
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.badge {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.badge-trivia   { background: var(--coral); }
+.badge-qotd     { background: var(--teal); }
+.badge-challenge{ background: var(--gold); color: var(--ink); }
+.badge-thisorthat { background: var(--coral-soft); color: var(--coral-dark); }
+.badge-wildcard { background: var(--coral-dark); }
+
+.card-emoji { font-size: 1.5rem; }
+
+.card-text {
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+
+/* this-or-that pills */
+.tot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tot-option {
+  flex: 1;
+  background: var(--peach);
+  color: var(--coral-dark);
+  font-weight: 800;
+  text-align: center;
+  border-radius: 16px;
+  padding: 14px 10px;
+  font-size: 1rem;
+  line-height: 1.3;
+}
+
+.tot-vs {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 800;
+  color: var(--coral);
+  font-size: 0.9rem;
+}
+
+/* reveal */
+.reveal-wrap { margin-bottom: 14px; }
+
+.answer {
+  background: #fff3ef;
+  border: 2px dashed var(--coral-soft);
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 800;
+  color: var(--coral-deep);
+  font-size: 1.05rem;
+  animation: pop 0.25s ease;
+}
+
+@keyframes pop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 22px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn:active { transform: scale(0.96); }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--coral) 0%, var(--coral-deep) 100%);
+  color: #fff;
+  box-shadow: var(--shadow);
+  width: 100%;
+}
+
+.btn-reveal {
+  background: #fff;
+  color: var(--coral-deep);
+  border: 2px solid var(--coral);
+  width: 100%;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border: 2px solid var(--peach);
+  width: 100%;
+}
+
+.card-actions { display: flex; flex-direction: column; gap: 8px; }
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--coral-deep);
+  font-family: "Nunito", sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-bottom: 12px;
+}
+
+/* ---------- games ---------- */
+
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+}
+
+.game-card:hover { border-color: var(--coral-soft); }
+.game-card:active { transform: scale(0.98); }
+
+.game-emoji {
+  font-size: 2rem;
+  background: var(--peach);
+  border-radius: 16px;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.game-info { flex: 1; }
+
+.game-info h3 {
+  font-family: "Baloo 2", sans-serif;
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+
+.game-info p {
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+.players-badge {
+  display: inline-block;
+  background: var(--coral);
+  color: #fff;
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.game-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.game-head h2 {
+  font-family: "Baloo 2", sans-serif;
+  font-size: 1.5rem;
+  color: var(--coral-deep);
+}
+
+.game-status {
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.game-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+/* tic-tac-toe */
+.ttt-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.ttt-cell {
+  aspect-ratio: 1;
+  background: #fff;
+  border: 2px solid var(--peach);
+  border-radius: 18px;
+  font-size: 2.4rem;
+  font-family: "Baloo 2", sans-serif;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  transition: transform 0.1s ease;
+}
+
+.ttt-cell:not(:disabled):hover { border-color: var(--coral); }
+.ttt-cell:active { transform: scale(0.94); }
+.ttt-cell:disabled { cursor: default; }
+.ttt-cell.win { background: var(--peach); border-color: var(--coral); }
+
+/* emoji riddle */
+.field { display: block; margin-bottom: 12px; }
+
+.field span {
+  display: block;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+.field input {
+  width: 100%;
+  font-family: "Nunito", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: #fff;
+  border: 2px solid var(--peach);
+  border-radius: 16px;
+  padding: 13px 15px;
+  outline: none;
+}
+
+.field input:focus { border-color: var(--coral); }
+
+.emoji-display {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: 2.6rem;
+  text-align: center;
+  padding: 30px 16px;
+  margin-bottom: 16px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* trivia battle */
+.battle-q {
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.battle-q .qnum {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--coral);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.battle-q .qtext {
+  font-weight: 700;
+  font-size: 1.02rem;
+  line-height: 1.4;
+  margin: 6px 0 12px;
+}
+
+.score-row { display: flex; gap: 8px; }
+
+.score-row .btn { flex: 1; padding: 10px 8px; font-size: 0.9rem; }
+
+.btn-yes { background: var(--teal); color: #fff; }
+.btn-no  { background: var(--peach); color: var(--coral-dark); }
+
+.btn-yes.picked, .btn-no.picked { outline: 3px solid var(--coral-dark); }
+
+.battle-result {
+  text-align: center;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px 18px;
+  margin-bottom: 12px;
+}
+
+.battle-result .big {
+  font-family: "Baloo 2", sans-serif;
+  font-size: 1.8rem;
+  color: var(--coral-deep);
+  margin-bottom: 6px;
+}
+
+.battle-result p { color: var(--ink-soft); font-weight: 700; }
+
+/* ---------- footer & toast ---------- */
+
+.footer {
+  text-align: center;
+  margin-top: 28px;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.footnote { font-size: 0.75rem; font-weight: 600; opacity: 0.8; margin-top: 4px; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ink);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 12px 20px;
+  border-radius: 999px;
+  opacity: 0;
+  transition: all 0.25s ease;
+  pointer-events: none;
+  z-index: 50;
+  max-width: 90vw;
+  text-align: center;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (min-width: 520px) {
+  .app { padding-top: 40px; }
+}
