@@ -1,0 +1,106 @@
+//
+//  MessagesViewController.swift
+//  Daily5 MessagesExtension
+//
+//  Wraps the Daily5 web app (https://trumooo.github.io/daily5/) in an
+//  iMessage app extension. The web app detects it is running inside the
+//  extension (?imsg=1) and, instead of opening a share sheet, posts the
+//  card text + link to the "daily5" script message handler below, which
+//  inserts it into the active conversation as an MSMessage.
+//
+
+import UIKit
+import Messages
+import WebKit
+
+class MessagesViewController: MSMessagesAppViewController, WKScriptMessageHandler {
+
+    private var webView: WKWebView!
+    private let appURL = URL(string: "https://trumooo.github.io/daily5/?imsg=1")!
+
+    // MARK: - Lifecycle
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        let contentController = WKUserContentController()
+        contentController.add(self, name: "daily5")
+
+        let config = WKWebViewConfiguration()
+        config.userContentController = contentController
+
+        webView = WKWebView(frame: view.bounds, configuration: config)
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        webView.isOpaque = false
+        webView.backgroundColor = UIColor(red: 1.0, green: 0.965, blue: 0.945, alpha: 1.0) // cream
+        webView.scrollView.backgroundColor = webView.backgroundColor
+        view.addSubview(webView)
+
+        webView.load(URLRequest(url: appURL))
+    }
+
+    override func willBecomeActive(with conversation: MSConversation) {
+        super.willBecomeActive(with: conversation)
+        routeToMessage(conversation.selectedMessage)
+    }
+
+    override func didSelect(_ message: MSMessage, conversation: MSConversation) {
+        super.didSelect(message, conversation: conversation)
+        // The user tapped another Daily5 bubble while the extension was
+        // already open — route to that state too.
+        routeToMessage(message)
+    }
+
+    /// Decodes a "data:image/png;base64,..." string from the web app.
+    private func decodeDataURL(_ dataURL: String?) -> UIImage? {
+        guard let dataURL = dataURL,
+              let comma = dataURL.range(of: "base64,"),
+              let data = Data(base64Encoded: String(dataURL[comma.upperBound...])) else { return nil }
+        return UIImage(data: data)
+    }
+
+    /// Routes the web app to the card/game state embedded in a tapped bubble.
+    private func routeToMessage(_ message: MSMessage?) {
+        guard let fragment = message?.url?.fragment,
+              var target = URLComponents(url: appURL, resolvingAgainstBaseURL: false) else { return }
+        target.fragment = fragment
+        if let url = target.url {
+            webView.load(URLRequest(url: url))
+        }
+    }
+
+    // MARK: - WKScriptMessageHandler
+
+    func userContentController(_ userContentController: WKUserContentController,
+                               didReceive message: WKScriptMessage) {
+        guard message.name == "daily5",
+              let body = message.body as? [String: Any],
+              let text = body["text"] as? String,
+              let conversation = activeConversation else { return }
+
+        let layout = MSMessageTemplateLayout()
+        layout.caption = text
+        layout.subcaption = "Daily5 🪸"
+        // The web app renders the live state (board, drawing, score) to a PNG
+        // data URL so the bubble previews the actual game, GamePigeon-style.
+        // The static coral card is only the fallback.
+        layout.image = decodeDataURL(body["image"] as? String) ?? UIImage(named: "MessageCard")
+
+        let msg = MSMessage(session: MSSession())
+        msg.layout = layout
+        msg.summaryText = text
+        if let urlString = body["url"] as? String, let url = URL(string: urlString) {
+            // The state-carrying URL: opening the bubble routes the recipient's
+            // extension (or Safari, if they don't have the app) to this state.
+            msg.url = url
+        }
+
+        conversation.insert(msg) { [weak self] error in
+            if error == nil {
+                DispatchQueue.main.async {
+                    self?.requestPresentationStyle(.compact)
+                }
+            }
+        }
+    }
+}
