@@ -342,6 +342,95 @@ button, input { touch-action: manipulation; }
   font-size: 0.9rem;
 }
 
+/* in-app responses on received cards */
+.resp-banner {
+  background: var(--answer-bg);
+  border: 2px dashed var(--coral-soft);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-weight: 800;
+  color: var(--coral-deep);
+  font-size: 0.92rem;
+  margin-bottom: 12px;
+}
+
+.resp-quote {
+  background: var(--peach);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.resp-quote span {
+  display: block;
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--coral-deep);
+  margin-bottom: 4px;
+}
+
+.resp-quote p {
+  font-weight: 700;
+  color: var(--ink);
+  overflow-wrap: break-word;
+}
+
+.answer-box {
+  width: 100%;
+  font-family: "Nunito", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--field-bg);
+  border: 2px solid var(--peach);
+  border-radius: 16px;
+  padding: 12px 14px;
+  outline: none;
+  resize: none;
+  margin-bottom: 2px;
+}
+
+.answer-box:focus { border-color: var(--coral); }
+.answer-box::placeholder { color: var(--ink-soft); opacity: 0.6; }
+
+.tot-legend {
+  text-align: center;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: 0.82rem;
+  margin-bottom: 10px;
+}
+
+.resp-verdict {
+  text-align: center;
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  color: var(--coral-deep);
+  margin-bottom: 10px;
+}
+
+button.tot-option {
+  font-family: "Nunito", sans-serif;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+  border: 2px solid transparent;
+}
+
+button.tot-option:active { transform: scale(0.96); }
+button.tot-option.mine { border-color: var(--coral-dark); background: var(--coral-soft); }
+
+.tot-option.theirs { position: relative; border: 2px dashed var(--teal); }
+.tot-option.theirs::before {
+  content: "⭐";
+  position: absolute;
+  top: -10px;
+  right: -6px;
+  font-size: 0.95rem;
+}
+
 /* reveal */
 .reveal-wrap { margin-bottom: 14px; }
 

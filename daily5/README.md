@@ -6,7 +6,9 @@ Five fresh cards a day for long-distance friends — live at
 ## What's in the box
 
 **Today's Five** — picked deterministically from the date, so both friends
-always see the identical set:
+always see the identical set. Each pool cycles through a seeded shuffle:
+guaranteed different cards every day, and nothing repeats until a whole
+pool has been used up.
 
 1. 🧠 **Trivia** — with a tap-to-reveal answer
 2. 💬 **Question of the day**
@@ -15,8 +17,16 @@ always see the identical set:
 5. 🎲 **Wildcard**
 
 Pick whichever ones you like and hit **Send** — it opens the iOS share sheet
-(Messages is right there), or copies the text on desktop. Trivia cards ship
-with a link that opens straight to the question + reveal button.
+(Messages is right there), or copies the text on desktop.
+
+**The whole exchange lives in the app.** When your friend opens a card link,
+they don't just look at it — they respond in-app and the response travels
+back through the link: tap a side on this-or-that (with a twins/clash
+verdict when picks meet), type an answer to the question of the day or
+wildcard, self-score the trivia (the reply message compares your results),
+or accept a photo challenge. Opening a reply shows their pick starred,
+their answer quoted, or their result bannered — and you can respond right
+back.
 
 **Games** (player count on every card, GamePigeon-style):
 

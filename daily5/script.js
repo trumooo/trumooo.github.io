@@ -49,14 +49,35 @@
     return `${d.getFullYear()}-${mm}-${dd}`;
   }
 
+  // Each pool cycles through a fixed seeded shuffle, one item per day —
+  // guaranteed different from yesterday, and nothing repeats until the whole
+  // pool has been used. Day number is computed from the dateKey via UTC so
+  // every timezone agrees on which item a given date gets.
+  const permCache = {};
+
+  function poolIndex(poolName, poolLen, dateKey) {
+    let perm = permCache[poolName];
+    if (!perm || perm.length !== poolLen) {
+      const rand = mulberry32(hashString("rot:" + poolName));
+      perm = [...Array(poolLen).keys()];
+      for (let i = poolLen - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [perm[i], perm[j]] = [perm[j], perm[i]];
+      }
+      permCache[poolName] = perm;
+    }
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const dayNum = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+    return perm[((dayNum % poolLen) + poolLen) % poolLen];
+  }
+
   function dailyPicks(dateKey) {
-    const rand = mulberry32(hashString("daily5:" + dateKey));
     return {
-      trivia: Math.floor(rand() * CONTENT.trivia.length),
-      qotd: Math.floor(rand() * CONTENT.qotd.length),
-      challenge: Math.floor(rand() * CONTENT.challenge.length),
-      thisOrThat: Math.floor(rand() * CONTENT.thisOrThat.length),
-      wildcard: Math.floor(rand() * CONTENT.wildcard.length),
+      trivia: poolIndex("trivia", CONTENT.trivia.length, dateKey),
+      qotd: poolIndex("qotd", CONTENT.qotd.length, dateKey),
+      challenge: poolIndex("challenge", CONTENT.challenge.length, dateKey),
+      thisOrThat: poolIndex("thisOrThat", CONTENT.thisOrThat.length, dateKey),
+      wildcard: poolIndex("wildcard", CONTENT.wildcard.length, dateKey),
     };
   }
 
@@ -449,13 +470,28 @@
     wildcard: { badge: "badge-wildcard", label: "Wildcard", emoji: "🎲" },
   };
 
-  function buildCard(type, idx, forDate) {
+  // A response travels back through the link as a 4th segment:
+  // #c=type.idx.date.resp — a/b for this-or-that, g/m for trivia,
+  // y for challenge-accepted, base64 text for answers.
+  function validResp(type, resp) {
+    if (!resp) return null;
+    if (type === "thisOrThat") return resp === "a" || resp === "b" ? resp : null;
+    if (type === "trivia") return resp === "g" || resp === "m" ? resp : null;
+    if (type === "challenge") return resp === "y" ? resp : null;
+    const text = dec(resp);
+    return text && text.trim() && text.length <= 300 ? text.trim() : null;
+  }
+
+  // mode "deck": today's list, plain send. mode "receive": opened from a
+  // friend's link — the card is answerable in-app, and friendResp (if the
+  // link carried one) renders their response.
+  function buildCard(type, idx, forDate, mode = "deck", friendResp = null) {
     const meta = CARD_META[type];
     const card = document.createElement("div");
     card.className = "card";
 
     const cardDate = forDate || todayKey();
-    const wasSent = isSent(type, idx, cardDate);
+    const wasSent = mode === "deck" && isSent(type, idx, cardDate);
     const top = document.createElement("div");
     top.className = "card-top";
     top.innerHTML =
@@ -466,60 +502,194 @@
        <span class="card-emoji" aria-hidden="true">${meta.emoji}</span>`;
     card.appendChild(top);
 
-    let shareText;
-    // The date rides along so the recipient's deck can sync to this day.
-    const shareUrl = `${BASE_URL}#c=${type}.${idx}.${cardDate}`;
+    const respUrl = (r) => `${BASE_URL}#c=${type}.${idx}.${cardDate}.${r}`;
+    const cardImage = () => (IN_IMESSAGE ? bubbleForCard(type, idx) : null);
+
+    function addPrimary(label) {
+      const actions = document.createElement("div");
+      actions.className = "card-actions";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-primary";
+      btn.textContent = label;
+      actions.appendChild(btn);
+      card.appendChild(actions);
+      return btn;
+    }
+
+    // ---- card body + interactions per type ----
 
     if (type === "trivia") {
       const item = CONTENT.trivia[idx];
-      shareText = `🧠 Trivia time! ${item.q}\n\nTap to reveal the answer 👇`;
+      if (mode === "receive" && friendResp) {
+        card.insertAdjacentHTML(
+          "beforeend",
+          `<div class="resp-banner">${friendResp === "g" ? "⭐ They got this one! Can you?" : "⭐ They missed this one! Redemption time?"}</div>`
+        );
+      }
       card.insertAdjacentHTML(
         "beforeend",
         `<p class="card-text">${esc(item.q)}</p>
          <div class="reveal-wrap">
            <button type="button" class="btn btn-reveal">Tap to reveal 👀</button>
            <p class="answer hidden" aria-live="polite">${esc(item.a)}</p>
-         </div>`
+         </div>` +
+          (mode === "receive"
+            ? `<div class="score-row hidden">
+                 <button type="button" class="btn btn-yes">I got it ✅</button>
+                 <button type="button" class="btn btn-no">Missed it ❌</button>
+               </div>`
+            : "")
       );
       const revealBtn = card.querySelector(".btn-reveal");
       revealBtn.addEventListener("click", () => {
         tick();
         revealBtn.classList.add("hidden");
         card.querySelector(".answer").classList.remove("hidden");
+        const row = card.querySelector(".score-row");
+        if (row) row.classList.remove("hidden");
       });
+
+      if (mode === "receive") {
+        const sendBtn = addPrimary("Send my result 📨");
+        sendBtn.classList.add("hidden");
+        let mine = null;
+        const yes = card.querySelector(".btn-yes");
+        const no = card.querySelector(".btn-no");
+        function pick(result, btn) {
+          mine = result;
+          tick();
+          yes.classList.toggle("picked", btn === yes);
+          no.classList.toggle("picked", btn === no);
+          sendBtn.classList.remove("hidden");
+        }
+        yes.addEventListener("click", () => pick("g", yes));
+        no.addEventListener("click", () => pick("m", no));
+        sendBtn.addEventListener("click", () => {
+          if (!mine) return;
+          let text;
+          if (friendResp === "g") text = mine === "g" ? "🧠 Got it too — big brain club ✨" : "🧠 Missed it... you win this round 😭";
+          else if (friendResp === "m") text = mine === "g" ? "🧠 Got it! You'll get the next one 😏" : "🧠 Missed it too — doomed together 🤝";
+          else text = mine === "g" ? "🧠 I got it! ✅ Did you?" : "🧠 That one stumped me 😅 Did you get it?";
+          sendFromButton(sendBtn, `${text}\n\nTap to see 👇`, respUrl(mine), null, cardImage());
+        });
+      }
     } else if (type === "thisOrThat") {
-      const [a, b] = CONTENT.thisOrThat[idx];
-      shareText = `🤔 This or that: ${a} or ${b}?? Choose wisely...`;
-      card.insertAdjacentHTML(
-        "beforeend",
-        `<div class="tot-row">
-           <div class="tot-option">${esc(a)}</div>
-           <span class="tot-vs" aria-label="versus">VS</span>
-           <div class="tot-option">${esc(b)}</div>
-         </div>`
-      );
-    } else {
-      const text = CONTENT[type][idx];
-      shareText = `${meta.emoji} ${meta.label}: ${text}`;
+      const pair = CONTENT.thisOrThat[idx];
+      const theirs = friendResp === "a" ? 0 : friendResp === "b" ? 1 : -1;
+      if (mode === "receive") {
+        card.insertAdjacentHTML(
+          "beforeend",
+          `<div class="tot-row">
+             <button type="button" class="tot-option${theirs === 0 ? " theirs" : ""}" data-pick="a">${esc(pair[0])}</button>
+             <span class="tot-vs" aria-label="versus">VS</span>
+             <button type="button" class="tot-option${theirs === 1 ? " theirs" : ""}" data-pick="b">${esc(pair[1])}</button>
+           </div>` +
+            (theirs >= 0 ? `<p class="tot-legend">⭐ their pick — tap yours!</p>` : `<p class="tot-legend">Tap your pick 👇</p>`) +
+            `<p class="resp-verdict hidden" aria-live="polite"></p>`
+        );
+        const sendBtn = addPrimary("Send my pick 📨");
+        sendBtn.classList.add("hidden");
+        let mine = null;
+        card.querySelectorAll(".tot-option").forEach((opt) => {
+          opt.addEventListener("click", () => {
+            tick();
+            mine = opt.dataset.pick;
+            card.querySelectorAll(".tot-option").forEach((o) => o.classList.toggle("mine", o === opt));
+            const verdict = card.querySelector(".resp-verdict");
+            if (theirs >= 0) {
+              const match = (mine === "a" ? 0 : 1) === theirs;
+              verdict.textContent = match ? "Twins! 🎉 Same pick." : "Team clash 😤 You two need to talk.";
+              verdict.classList.remove("hidden");
+            }
+            sendBtn.classList.remove("hidden");
+          });
+        });
+        sendBtn.addEventListener("click", () => {
+          if (!mine) return;
+          const choice = mine === "a" ? pair[0] : pair[1];
+          let text;
+          if (theirs < 0) text = `🤔 I'm team ${choice}! What about you? 👇`;
+          else if ((mine === "a" ? 0 : 1) === theirs) text = `🤔 Team ${choice} too — twins! 🎉`;
+          else text = `🤔 I'm team ${choice}... we are NOT the same 😤👇`;
+          sendFromButton(sendBtn, text, respUrl(mine), null, cardImage());
+        });
+      } else {
+        card.insertAdjacentHTML(
+          "beforeend",
+          `<div class="tot-row">
+             <div class="tot-option">${esc(pair[0])}</div>
+             <span class="tot-vs" aria-label="versus">VS</span>
+             <div class="tot-option">${esc(pair[1])}</div>
+           </div>`
+        );
+      }
+    } else if (type === "challenge") {
+      const text = CONTENT.challenge[idx];
+      if (mode === "receive" && friendResp === "y") {
+        card.insertAdjacentHTML("beforeend", `<div class="resp-banner">✅ They accepted the challenge — photo incoming!</div>`);
+      }
       card.insertAdjacentHTML("beforeend", `<p class="card-text">${esc(text)}</p>`);
+      if (mode === "receive" && friendResp !== "y") {
+        card.insertAdjacentHTML("beforeend", `<p class="tot-legend">Accept, then drop your photo right in the chat 📎</p>`);
+        const sendBtn = addPrimary("Accept the challenge ✅");
+        sendBtn.addEventListener("click", () => {
+          sendFromButton(sendBtn, "📸 Challenge accepted! Incoming...", respUrl("y"), null, cardImage());
+        });
+      }
+    } else {
+      // qotd + wildcard: free-text answers
+      const text = CONTENT[type][idx];
+      card.insertAdjacentHTML("beforeend", `<p class="card-text">${esc(text)}</p>`);
+      if (mode === "receive") {
+        if (friendResp) {
+          const quote = document.createElement("div");
+          quote.className = "resp-quote";
+          const label = document.createElement("span");
+          label.textContent = "Their answer";
+          const body = document.createElement("p");
+          body.textContent = friendResp;
+          quote.appendChild(label);
+          quote.appendChild(body);
+          card.appendChild(quote);
+        }
+        const ta = document.createElement("textarea");
+        ta.className = "answer-box";
+        ta.maxLength = 240;
+        ta.rows = 3;
+        ta.placeholder = friendResp ? "Your answer back..." : "Type your answer...";
+        ta.setAttribute("aria-label", "Your answer");
+        card.appendChild(ta);
+        const sendBtn = addPrimary("Send my answer 📨");
+        sendBtn.addEventListener("click", () => {
+          const ans = ta.value.trim();
+          if (!ans) {
+            toast("Write your answer first! ✍️");
+            return;
+          }
+          sendFromButton(sendBtn, `${meta.emoji} My answer: ${ans}\n\nYour turn 👇`, respUrl(enc(ans)), null, cardImage());
+        });
+      }
     }
 
-    const actions = document.createElement("div");
-    actions.className = "card-actions";
-    const sendBtn = document.createElement("button");
-    sendBtn.type = "button";
-    sendBtn.className = "btn btn-primary";
-    sendBtn.textContent = wasSent ? "Send again 📨" : "Send this one 📨";
-    sendBtn.addEventListener("click", async () => {
-      const image = IN_IMESSAGE ? bubbleForCard(type, idx) : null;
-      const outcome = await sendFromButton(sendBtn, shareText, shareUrl, "Send again 📨", image);
-      if (outcome === "sent" || outcome === "copied") {
-        markSent(type, idx, cardDate);
-        card.querySelector(".sent-chip").classList.remove("hidden");
-      }
-    });
-    actions.appendChild(sendBtn);
-    card.appendChild(actions);
+    // ---- deck mode: the plain "send this card" action ----
+
+    if (mode === "deck") {
+      let shareText;
+      if (type === "trivia") shareText = `🧠 Trivia time! ${CONTENT.trivia[idx].q}\n\nTap to reveal the answer 👇`;
+      else if (type === "thisOrThat") shareText = `🤔 This or that: ${CONTENT.thisOrThat[idx][0]} or ${CONTENT.thisOrThat[idx][1]}?? Choose wisely...`;
+      else shareText = `${meta.emoji} ${meta.label}: ${CONTENT[type][idx]}`;
+      const shareUrl = `${BASE_URL}#c=${type}.${idx}.${cardDate}`;
+      const sendBtn = addPrimary(wasSent ? "Send again 📨" : "Send this one 📨");
+      sendBtn.addEventListener("click", async () => {
+        const outcome = await sendFromButton(sendBtn, shareText, shareUrl, "Send again 📨", cardImage());
+        if (outcome === "sent" || outcome === "copied") {
+          markSent(type, idx, cardDate);
+          card.querySelector(".sent-chip").classList.remove("hidden");
+        }
+      });
+    }
+
     return card;
   }
 
@@ -1220,7 +1390,7 @@
     const val = eq === -1 ? "" : hash.slice(eq + 1);
 
     if (kind === "c") {
-      const [type, idxStr, linkDate] = val.split(".");
+      const [type, idxStr, linkDate, respRaw] = val.split(".");
       const idx = parseInt(idxStr, 10);
       const pool = CONTENT[type];
       if (pool && idx >= 0 && idx < pool.length) {
@@ -1232,7 +1402,7 @@
         if (target !== deckKey) renderDeck(target);
         const holder = document.getElementById("single-card");
         holder.innerHTML = "";
-        holder.appendChild(buildCard(type, idx, validDate || todayKey()));
+        holder.appendChild(buildCard(type, idx, validDate || todayKey(), "receive", validResp(type, respRaw)));
         show("card");
         return;
       }
