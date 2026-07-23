@@ -359,6 +359,20 @@
     return bubbleExport(c);
   }
 
+  function bubbleForInvite(g) {
+    const [c, ctx] = bubbleBase();
+    ctx.textAlign = "center";
+    ctx.font = "88px sans-serif";
+    ctx.fillText(g.emoji, 300, 128);
+    ctx.fillStyle = "#e8553f";
+    ctx.font = '800 52px "Baloo 2", "Nunito", sans-serif';
+    ctx.fillText(g.name, 300, 220);
+    ctx.fillStyle = "#7a4a3d";
+    ctx.font = '700 30px "Nunito", sans-serif';
+    ctx.fillText(`Let's play! 👥 ${g.players} players`, 300, 290);
+    return bubbleExport(c);
+  }
+
   function bubbleForPict(strokes) {
     const [c, ctx] = bubbleBase();
     const size = 360;
@@ -548,21 +562,46 @@
 
   // ---------- games list ----------
 
+  // "Let's play!" without composing first — the GamePigeon move. The link
+  // drops the recipient straight into the game (their turn / their canvas).
+  function sendInvite(g, btn) {
+    let url = `${BASE_URL}#g=${g.id}`;
+    if (g.id === "battle") url += "." + (deckKey || todayKey()); // same question set for both
+    sendFromButton(btn, g.invite, url, null, IN_IMESSAGE ? bubbleForInvite(g) : null);
+  }
+
   function renderGames() {
     const list = document.getElementById("game-list");
     list.innerHTML = "";
     GAMES.forEach((g) => {
-      const el = document.createElement("button");
-      el.type = "button";
+      const el = document.createElement("div");
       el.className = "game-card";
+      el.setAttribute("role", "button");
+      el.setAttribute("tabindex", "0");
+      el.setAttribute("aria-label", `Play ${g.name}`);
       el.innerHTML = `
         <div class="game-emoji" aria-hidden="true">${g.emoji}</div>
         <div class="game-info">
           <h3>${esc(g.name)}</h3>
           <p>${esc(g.desc)}</p>
         </div>
-        <span class="players-badge">👥 ${g.players} players</span>`;
+        <div class="game-side">
+          <span class="players-badge">👥 ${g.players} players</span>
+          <button type="button" class="btn-invite">Invite 📨</button>
+        </div>`;
       el.addEventListener("click", () => openGame(g.id));
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openGame(g.id);
+        }
+      });
+      const inviteBtn = el.querySelector(".btn-invite");
+      inviteBtn.setAttribute("aria-label", `Invite a friend to ${g.name}`);
+      inviteBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        sendInvite(g, inviteBtn);
+      });
       list.appendChild(el);
     });
   }
@@ -1177,6 +1216,20 @@
         holder.innerHTML = "";
         holder.appendChild(buildCard(type, idx, validDate || todayKey()));
         show("card");
+        return;
+      }
+    } else if (kind === "g") {
+      // Game invite: drop the recipient straight into the game.
+      const [gid, gDate] = val.split(".");
+      if (GAMES.some((game) => game.id === gid)) {
+        if (gid === "battle") {
+          const target = gDate && withinDays(gDate, 2) ? gDate : todayKey();
+          if (target !== deckKey) renderDeck(target);
+          battleInit(target, null);
+          show("battle");
+        } else {
+          openGame(gid);
+        }
         return;
       }
     } else if (kind === "ttt" && /^[xo-]{9}$/.test(val) && tttPlausible(val)) {

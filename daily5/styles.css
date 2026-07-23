@@ -478,6 +478,32 @@ button, input { touch-action: manipulation; }
   margin-top: 2px;
 }
 
+.game-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-invite {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: var(--card);
+  color: var(--coral-deep);
+  border: 2px solid var(--coral);
+  border-radius: 999px;
+  padding: 7px 16px;
+  min-height: 36px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s ease;
+}
+
+.btn-invite:active { transform: scale(0.94); }
+.btn-invite:disabled { cursor: default; }
+
 .players-badge {
   display: inline-block;
   background: var(--coral);
