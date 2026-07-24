@@ -40,8 +40,12 @@ send. Open games take the full screen. Player count is on every tile.
 - 🎨 **Pictionary** · 2P — five brush colors, a 60-second clock that
   starts on your first stroke, and the whole drawing travels in the link;
   they watch it replay stroke by stroke, guess, then reveal.
-- ⚔️ **Trivia Battle** · 2P — tap to challenge, then play your own round;
-  same 5 date-pinned questions for both, head-to-head result on their end.
+- ⚔️ **Trivia Battle** · 2P — a one-question-at-a-time wizard: 4 multiple
+  choice options (identical for both players, seeded from the date), 20
+  seconds per question, ✓✗ progress pips, and per-question results riding
+  in the link so the results screen shows both trails side by side. Tap the
+  tile to challenge, then play your own round. See
+  `DESIGN-battle-wizard.md` for the design sprint behind it.
 
 No backend, no accounts: all state lives in the URL hash, all daily content
 is seeded from the date in `content.js`.
