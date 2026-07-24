@@ -404,16 +404,17 @@
     ctx.strokeStyle = "#ffd9cc";
     ctx.lineWidth = 3;
     ctx.stroke();
-    ctx.strokeStyle = "#e8553f";
     ctx.lineWidth = 5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     const k = size / 256;
     for (const s of strokes) {
+      const pts = s.pts;
+      ctx.strokeStyle = PICT_COLORS[s.c] || PICT_COLORS[0];
       ctx.beginPath();
-      ctx.moveTo(ox + s[0][0] * k, oy + s[0][1] * k);
-      for (let i = 1; i < s.length; i++) ctx.lineTo(ox + s[i][0] * k, oy + s[i][1] * k);
-      if (s.length === 1) ctx.lineTo(ox + s[0][0] * k + 0.001, oy + s[0][1] * k);
+      ctx.moveTo(ox + pts[0][0] * k, oy + pts[0][1] * k);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(ox + pts[i][0] * k, oy + pts[i][1] * k);
+      if (pts.length === 1) ctx.lineTo(ox + pts[0][0] * k + 0.001, oy + pts[0][1] * k);
       ctx.stroke();
     }
     return bubbleExport(c);
@@ -433,9 +434,13 @@
     battle: "Daily5 🪸 — Trivia Battle",
   };
 
+  const GAME_VIEWS = new Set(["ttt", "emoji", "pict", "battle"]);
+
   function show(name) {
     views.forEach((v) => document.getElementById("view-" + v).classList.toggle("hidden", v !== name));
     document.getElementById("tabs").classList.toggle("hidden", name === "card");
+    // GamePigeon-style: an open game takes the whole screen.
+    document.body.classList.toggle("in-game", GAME_VIEWS.has(name));
     document.querySelectorAll(".tab").forEach((t) => {
       t.classList.toggle("active", t.dataset.tab === name);
     });
@@ -732,46 +737,46 @@
 
   // ---------- games list ----------
 
-  // "Let's play!" without composing first — the GamePigeon move. The link
-  // drops the recipient straight into the game (their turn / their canvas).
-  function sendInvite(g, btn) {
+  // GamePigeon flow: tapping a tile IS the action. Challenge games fire the
+  // game message immediately (the recipient takes the first turn); compose
+  // games open their quick setup first, then send.
+  async function gameAction(g) {
+    if (g.kind === "compose") {
+      openGame(g.id);
+      return;
+    }
     let url = `${BASE_URL}#g=${g.id}`;
     if (g.id === "battle") url += "." + (deckKey || todayKey()); // same question set for both
-    sendFromButton(btn, g.invite, url, null, IN_IMESSAGE ? bubbleForInvite(g) : null);
+    const outcome = await send(g.invite, url, IN_IMESSAGE ? bubbleForInvite(g) : null);
+    if (outcome !== "sent" && outcome !== "copied") return;
+    if (g.id === "battle") {
+      // Anagrams-style: both players run the same board — play your round now.
+      battleInit(deckKey || todayKey(), null);
+      show("battle");
+      document.getElementById("battle-status").textContent =
+        "Challenge sent! 🎯 Now play your round — then send your score.";
+    } else {
+      toast("Challenge sent — their move first 😏");
+    }
   }
 
   function renderGames() {
     const list = document.getElementById("game-list");
     list.innerHTML = "";
     GAMES.forEach((g) => {
-      const el = document.createElement("div");
+      const el = document.createElement("button");
+      el.type = "button";
       el.className = "game-card";
-      el.setAttribute("role", "button");
-      el.setAttribute("tabindex", "0");
-      el.setAttribute("aria-label", `Play ${g.name}`);
+      el.setAttribute(
+        "aria-label",
+        g.kind === "compose" ? `Set up ${g.name} to send` : `Challenge a friend to ${g.name}`
+      );
       el.innerHTML = `
-        <div class="game-emoji" aria-hidden="true">${g.emoji}</div>
-        <div class="game-info">
-          <h3>${esc(g.name)}</h3>
-          <p>${esc(g.desc)}</p>
-        </div>
-        <div class="game-side">
-          <span class="players-badge">👥 ${g.players} players</span>
-          <button type="button" class="btn-invite">Invite 📨</button>
-        </div>`;
-      el.addEventListener("click", () => openGame(g.id));
-      el.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          openGame(g.id);
-        }
-      });
-      const inviteBtn = el.querySelector(".btn-invite");
-      inviteBtn.setAttribute("aria-label", `Invite a friend to ${g.name}`);
-      inviteBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        sendInvite(g, inviteBtn);
-      });
+        <span class="tile-emoji" aria-hidden="true">${g.emoji}</span>
+        <span class="tile-name">${esc(g.name)}</span>
+        <span class="tile-badge">👥 ${g.players}P</span>
+        <span class="tile-hint">${g.kind === "compose" ? "✏️" : "📨"} ${esc(g.tileHint)}</span>`;
+      el.addEventListener("click", () => gameAction(g));
       list.appendChild(el);
     });
   }
@@ -977,15 +982,63 @@
   // base64url'd into the link — so the whole drawing travels in the URL.
 
   const PICT_MAX_POINTS = 1200; // keeps the link a sane length for Messages
-  const PICT_INK = "#e8553f";
+  const PICT_COLORS = ["#e8553f", "#2ec4b6", "#4a90e2", "#e8a33d", "#43241b"];
   const PICT_PAPER = "#fffdfb";
+  // Draw time limit (seconds). Tests may shrink it via ?pt=N.
+  const PICT_TIME = (() => {
+    const n = parseInt(new URLSearchParams(location.search).get("pt"), 10);
+    return n >= 2 && n <= 300 ? n : 60;
+  })();
 
-  let pictStrokes = [];       // finished strokes: arrays of [x, y] in 0-255
+  let pictStrokes = [];       // finished strokes: {c: colorIdx, pts: [[x, y], ...]} in 0-255
   let pictLive = null;        // stroke currently being drawn
+  let pictColor = 0;
   let pictPoints = 0;
   let pictInkWarned = false;
   let pictSolveStrokes = null;
   let pictReplayToken = 0;    // invalidates an in-flight replay animation
+  let pictTimerId = null;
+  let pictTimeLeft = PICT_TIME;
+  let pictTimeUp = false;
+
+  const pictTimerEl = document.getElementById("pict-timer");
+
+  function pictFmtTime(s) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  }
+
+  function pictTimerReset() {
+    clearInterval(pictTimerId);
+    pictTimerId = null;
+    pictTimeLeft = PICT_TIME;
+    pictTimeUp = false;
+    pictTimerEl.classList.remove("low");
+    pictTimerEl.textContent = `⏱ ${pictFmtTime(PICT_TIME)}`;
+  }
+
+  function pictTimerStart() {
+    if (pictTimerId || pictTimeUp) return;
+    pictTimerEl.textContent = `⏱ ${pictFmtTime(pictTimeLeft)}`;
+    pictTimerId = setInterval(() => {
+      // If the user wandered off mid-game, stop ticking quietly.
+      if (document.getElementById("view-pict").classList.contains("hidden")) {
+        clearInterval(pictTimerId);
+        pictTimerId = null;
+        return;
+      }
+      pictTimeLeft--;
+      pictTimerEl.textContent = `⏱ ${pictFmtTime(Math.max(0, pictTimeLeft))}`;
+      if (pictTimeLeft <= 10) pictTimerEl.classList.add("low");
+      if (pictTimeLeft <= 0) {
+        clearInterval(pictTimerId);
+        pictTimerId = null;
+        pictTimeUp = true;
+        pictEndStroke();
+        pictTimerEl.textContent = "⏰ Time's up!";
+        toast("⏰ Pens down! Send it as-is 📨");
+      }
+    }, 1000);
+  }
 
   const pictCanvas = document.getElementById("pict-canvas");
   const pictCanvas2 = document.getElementById("pict-canvas2");
@@ -1010,11 +1063,18 @@
     }
   }
 
+  // All-coral drawings use the original single-color format so old clients
+  // still decode them. Multi-color drawings use v1: a [0,0,1] marker (an
+  // impossible zero-length stroke in the old format) then a color byte
+  // before each stroke.
   function encodeStrokes(strokes) {
+    const versioned = strokes.some((s) => s.c !== 0);
     const bytes = [];
+    if (versioned) bytes.push(0, 0, 1);
     for (const s of strokes) {
-      bytes.push((s.length >> 8) & 255, s.length & 255);
-      for (const [x, y] of s) bytes.push(x, y);
+      if (versioned) bytes.push(s.c);
+      bytes.push((s.pts.length >> 8) & 255, s.pts.length & 255);
+      for (const [x, y] of s.pts) bytes.push(x, y);
     }
     return bytesToB64(Uint8Array.from(bytes));
   }
@@ -1022,22 +1082,34 @@
   function decodeStrokes(str) {
     const bytes = b64ToBytes(str);
     if (!bytes || !bytes.length) return null;
-    const strokes = [];
     let i = 0;
+    let versioned = false;
+    if (bytes.length >= 3 && bytes[0] === 0 && bytes[1] === 0) {
+      if (bytes[2] !== 1) return null;
+      versioned = true;
+      i = 3;
+    }
+    const strokes = [];
     let total = 0;
     while (i < bytes.length) {
+      let c = 0;
+      if (versioned) {
+        c = bytes[i];
+        i += 1;
+        if (c >= PICT_COLORS.length) return null;
+      }
       if (i + 2 > bytes.length) return null;
       const n = (bytes[i] << 8) | bytes[i + 1];
       i += 2;
       if (n < 1 || i + n * 2 > bytes.length) return null;
       total += n;
       if (total > PICT_MAX_POINTS * 2) return null;
-      const s = [];
+      const pts = [];
       for (let k = 0; k < n; k++) {
-        s.push([bytes[i], bytes[i + 1]]);
+        pts.push([bytes[i], bytes[i + 1]]);
         i += 2;
       }
-      strokes.push(s);
+      strokes.push({ c, pts });
     }
     return strokes.length ? strokes : null;
   }
@@ -1060,7 +1132,6 @@
     const size = canvas.width;
     ctx.fillStyle = PICT_PAPER;
     ctx.fillRect(0, 0, size, size);
-    ctx.strokeStyle = PICT_INK;
     ctx.lineWidth = Math.max(3, size / 90);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -1068,13 +1139,15 @@
     let budget = upToPoints === undefined ? Infinity : upToPoints;
     for (const s of strokes) {
       if (budget <= 0) break;
+      const pts = s.pts;
+      ctx.strokeStyle = PICT_COLORS[s.c] || PICT_COLORS[0];
       ctx.beginPath();
-      ctx.moveTo(s[0][0] * k, s[0][1] * k);
-      const nPts = Math.min(s.length, Math.max(1, budget));
-      for (let i = 1; i < nPts; i++) ctx.lineTo(s[i][0] * k, s[i][1] * k);
-      if (nPts === 1) ctx.lineTo(s[0][0] * k + 0.001, s[0][1] * k); // a dot
+      ctx.moveTo(pts[0][0] * k, pts[0][1] * k);
+      const nPts = Math.min(pts.length, Math.max(1, budget));
+      for (let i = 1; i < nPts; i++) ctx.lineTo(pts[i][0] * k, pts[i][1] * k);
+      if (nPts === 1) ctx.lineTo(pts[0][0] * k + 0.001, pts[0][1] * k); // a dot
       ctx.stroke();
-      budget -= s.length;
+      budget -= pts.length;
     }
   }
 
@@ -1106,6 +1179,7 @@
     pictPoints = 0;
     pictInkWarned = false;
     pictReplayToken++;
+    pictTimerReset();
     if (!pictWordInput.value.trim()) pictWordInput.value = pictRandomWord();
     requestAnimationFrame(pictComposeRepaint);
   }
@@ -1118,10 +1192,15 @@
   }
 
   pictCanvas.addEventListener("pointerdown", (e) => {
+    if (pictTimeUp) {
+      toast("⏰ Time's up — send what you've got!");
+      return;
+    }
     if (pictPoints >= PICT_MAX_POINTS) return;
     e.preventDefault();
     pictCanvas.setPointerCapture(e.pointerId);
-    pictLive = [pictPointFromEvent(e)];
+    pictTimerStart();
+    pictLive = { c: pictColor, pts: [pictPointFromEvent(e)] };
     pictPoints++;
     pictComposeRepaint();
   });
@@ -1129,6 +1208,7 @@
   pictCanvas.addEventListener("pointermove", (e) => {
     if (!pictLive) return;
     e.preventDefault();
+    if (pictTimeUp) return;
     if (pictPoints >= PICT_MAX_POINTS) {
       if (!pictInkWarned) {
         pictInkWarned = true;
@@ -1137,9 +1217,10 @@
       return;
     }
     const [x, y] = pictPointFromEvent(e);
-    const last = pictLive[pictLive.length - 1];
+    const pts = pictLive.pts;
+    const last = pts[pts.length - 1];
     if (Math.hypot(x - last[0], y - last[1]) < 3) return; // thin dense points
-    pictLive.push([x, y]);
+    pts.push([x, y]);
     pictPoints++;
     pictComposeRepaint();
   });
@@ -1158,18 +1239,28 @@
     pictWordInput.value = pictRandomWord();
   });
 
+  document.querySelectorAll(".color-dot").forEach((dot) => {
+    dot.addEventListener("click", () => {
+      tick();
+      pictColor = parseInt(dot.dataset.color, 10) || 0;
+      document.querySelectorAll(".color-dot").forEach((d) => d.classList.toggle("active", d === dot));
+    });
+  });
+
   document.getElementById("pict-undo").addEventListener("click", () => {
     const gone = pictStrokes.pop();
-    if (gone) pictPoints -= gone.length;
+    if (gone) pictPoints -= gone.pts.length;
     if (pictPoints < PICT_MAX_POINTS) pictInkWarned = false;
     pictComposeRepaint();
   });
 
+  // Clear is a full restart: blank paper, fresh clock.
   document.getElementById("pict-clear").addEventListener("click", () => {
     pictStrokes = [];
     pictLive = null;
     pictPoints = 0;
     pictInkWarned = false;
+    pictTimerReset();
     pictComposeRepaint();
   });
 
@@ -1196,7 +1287,7 @@
   function pictReplay() {
     if (!pictSolveStrokes) return;
     const token = ++pictReplayToken;
-    const total = pictSolveStrokes.reduce((n, s) => n + s.length, 0);
+    const total = pictSolveStrokes.reduce((n, s) => n + s.pts.length, 0);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced || total < 2) {
       pictPaint(pictCanvas2, pictSolveStrokes);

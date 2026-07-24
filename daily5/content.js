@@ -170,15 +170,17 @@ const GAMES = [
     name: "Tic-Tac-Toe",
     emoji: "⭕",
     players: 2,
-    desc: "Classic 3-in-a-row. Make your move, send it, and wait for their comeback.",
-    invite: "⭕ Tic-Tac-Toe: I challenge you! You go first — tap to make the opening move 👇",
+    kind: "challenge", // tap = challenge sent, they go first
+    tileHint: "they go first",
+    invite: "⭕ Tic-Tac-Toe: your move! Tap to play 👇",
   },
   {
     id: "emoji",
     name: "Emoji Riddle",
     emoji: "🧩",
     players: 2,
-    desc: "Write a movie, song, or phrase in pure emoji. They guess, then tap to reveal.",
+    kind: "compose", // tap = quick setup, then send
+    tileHint: "write yours",
     invite: "🧩 Emoji Riddle: send me one to crack! Tap to write yours 👇",
   },
   {
@@ -186,7 +188,8 @@ const GAMES = [
     name: "Pictionary",
     emoji: "🎨",
     players: 2,
-    desc: "Get a word, draw it, send it. They watch it replay, guess, then reveal. No letters allowed!",
+    kind: "compose",
+    tileHint: "draw yours",
     invite: "🎨 Pictionary: draw me something! Tap to start sketching 👇",
   },
   {
@@ -194,7 +197,8 @@ const GAMES = [
     name: "Trivia Battle",
     emoji: "⚔️",
     players: 2,
-    desc: "Same 5 daily questions for both of you. Play, send your score, settle it.",
+    kind: "challenge",
+    tileHint: "both play today's 5",
     invite: "⚔️ Trivia Battle: I challenge you to today's 5 questions! Play, then send me your score 👇",
   },
 ];

@@ -56,9 +56,9 @@
         <div id="deck"></div>
       </section>
 
-      <!-- Games list -->
+      <!-- Games grid -->
       <section id="view-games" class="view hidden" aria-label="Games">
-        <p class="hint">Turn-based games that travel through Messages — like passing notes, but faster 📨</p>
+        <p class="hint">Tap a game to send it 📨 — ✏️ ones you set up first</p>
         <div id="game-list"></div>
       </section>
 
@@ -130,13 +130,23 @@
         </div>
 
         <div id="pict-compose">
-          <p class="game-status">Draw your word below — no letters, no numbers! They'll watch it appear and guess.</p>
+          <p class="game-status">Draw your word — no letters, no numbers! The clock starts on your first stroke, and they'll watch it appear and guess.</p>
           <div class="word-row">
             <label class="field">
               <span>Your word (hidden until they reveal)</span>
               <input id="pict-word" type="text" maxlength="24" autocomplete="off" enterkeyhint="done" />
             </label>
             <button type="button" class="btn-dice" id="pict-dice" aria-label="Shuffle to a new random word">🎲</button>
+          </div>
+          <div class="pict-tools-row">
+            <div class="pict-colors" role="radiogroup" aria-label="Brush color" id="pict-colors">
+              <button type="button" class="color-dot active" data-color="0" style="--dot:#e8553f" aria-label="Coral brush"></button>
+              <button type="button" class="color-dot" data-color="1" style="--dot:#2ec4b6" aria-label="Teal brush"></button>
+              <button type="button" class="color-dot" data-color="2" style="--dot:#4a90e2" aria-label="Blue brush"></button>
+              <button type="button" class="color-dot" data-color="3" style="--dot:#e8a33d" aria-label="Gold brush"></button>
+              <button type="button" class="color-dot" data-color="4" style="--dot:#43241b" aria-label="Ink brush"></button>
+            </div>
+            <span class="pict-timer" id="pict-timer" aria-live="polite"></span>
           </div>
           <div class="pict-canvas-wrap">
             <canvas class="pict-canvas" id="pict-canvas" aria-label="Drawing canvas — draw with your finger or mouse"></canvas>
