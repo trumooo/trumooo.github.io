@@ -31,9 +31,8 @@
       <div class="logo-row">
         <span class="logo-coral" aria-hidden="true">🪸</span>
         <h1>Daily<span class="logo-five">5</span></h1>
+        <p class="date-chip" id="date-chip"></p>
       </div>
-      <p class="tagline">a little something every day, no matter the miles</p>
-      <p class="date-chip" id="date-chip"></p>
     </header>
 
     <nav class="tabs" id="tabs" aria-label="Sections">
@@ -92,12 +91,15 @@
         </div>
 
         <div id="emoji-compose">
-          <p class="game-status">Write something in pure emoji — a movie, song, place, or inside joke — and let them sweat it out.</p>
-          <label class="field">
-            <span>Your emoji riddle</span>
-            <input id="emoji-puzzle" type="text" inputmode="text" placeholder="🐠🔍 (Finding Nemo)" maxlength="40"
-                   autocomplete="off" autocapitalize="off" enterkeyhint="next" />
-          </label>
+          <p class="game-status" id="emoji-status">Write something in pure emoji and let them sweat it out.</p>
+          <div class="word-row">
+            <label class="field">
+              <span id="emoji-label">Your emoji riddle</span>
+              <input id="emoji-puzzle" type="text" inputmode="text" placeholder="🐠🔍 (Finding Nemo)" maxlength="40"
+                     autocomplete="off" autocapitalize="off" enterkeyhint="next" />
+            </label>
+            <button type="button" class="btn-dice" id="emoji-dice" aria-label="Deal a category prompt">🎲</button>
+          </div>
           <label class="field">
             <span>The answer (hidden until they tap reveal)</span>
             <input id="emoji-answer" type="text" placeholder="Finding Nemo" maxlength="60"
@@ -130,7 +132,7 @@
         </div>
 
         <div id="pict-compose">
-          <p class="game-status">Draw your word — no letters, no numbers! The clock starts on your first stroke, and they'll watch it appear and guess.</p>
+          <p class="game-status" id="pict-status">Draw your word — no letters, no numbers! The clock starts on your first stroke, and they'll watch it appear and guess.</p>
           <div class="word-row">
             <label class="field">
               <span>Your word (hidden until they reveal)</span>
@@ -198,6 +200,7 @@
     </main>
 
     <footer class="footer">
+      <p class="tagline">a little something every day, no matter the miles</p>
       <p>made with 🪸 for the long-distance besties</p>
       <p class="footnote">same five cards for everyone each day — so you're always on the same page</p>
     </footer>
