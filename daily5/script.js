@@ -522,6 +522,22 @@
       return btn;
     }
 
+    // After a response goes out, offer the app's front door — the moment a
+    // friend has just felt the loop work is the moment to show today's five.
+    function offerContinuation(afterBtn, outcome) {
+      if (outcome !== "sent" && outcome !== "copied") return;
+      if (card.querySelector(".continue-btn")) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn btn-ghost continue-btn";
+      btn.textContent = "See today's five →";
+      btn.addEventListener("click", () => {
+        clearHash();
+        show("today");
+      });
+      afterBtn.parentElement.appendChild(btn);
+    }
+
     // ---- card body + interactions per type ----
 
     if (type === "trivia") {
@@ -576,7 +592,7 @@
           if (friendResp === "g") text = mine === "g" ? "🧠 Got it too — big brain club ✨" : "🧠 Missed it... you win this round 😭";
           else if (friendResp === "m") text = mine === "g" ? "🧠 Got it! You'll get the next one 😏" : "🧠 Missed it too — doomed together 🤝";
           else text = mine === "g" ? "🧠 I got it! ✅ Did you?" : "🧠 That one stumped me 😅 Did you get it?";
-          sendFromButton(sendBtn, `${text}\n\nTap to see 👇`, respUrl(mine), null, cardImage());
+          sendFromButton(sendBtn, `${text}\n\nTap to see 👇`, respUrl(mine), null, cardImage()).then((o) => offerContinuation(sendBtn, o));
         });
       }
     } else if (type === "thisOrThat") {
@@ -617,7 +633,7 @@
           if (theirs < 0) text = `🤔 I'm team ${choice}! What about you? 👇`;
           else if ((mine === "a" ? 0 : 1) === theirs) text = `🤔 Team ${choice} too — twins! 🎉`;
           else text = `🤔 I'm team ${choice}... we are NOT the same 😤👇`;
-          sendFromButton(sendBtn, text, respUrl(mine), null, cardImage());
+          sendFromButton(sendBtn, text, respUrl(mine), null, cardImage()).then((o) => offerContinuation(sendBtn, o));
         });
       } else {
         card.insertAdjacentHTML(
@@ -639,7 +655,7 @@
         card.insertAdjacentHTML("beforeend", `<p class="tot-legend">Accept, then drop your photo right in the chat 📎</p>`);
         const sendBtn = addPrimary("Accept the challenge ✅");
         sendBtn.addEventListener("click", () => {
-          sendFromButton(sendBtn, "📸 Challenge accepted! Incoming...", respUrl("y"), null, cardImage());
+          sendFromButton(sendBtn, "📸 Challenge accepted! Incoming...", respUrl("y"), null, cardImage()).then((o) => offerContinuation(sendBtn, o));
         });
       }
     } else {
@@ -672,7 +688,7 @@
             toast("Write your answer first! ✍️");
             return;
           }
-          sendFromButton(sendBtn, `${meta.emoji} My answer: ${ans}\n\nYour turn 👇`, respUrl(enc(ans)), null, cardImage());
+          sendFromButton(sendBtn, `${meta.emoji} My answer: ${ans}\n\nYour turn 👇`, respUrl(enc(ans)), null, cardImage()).then((o) => offerContinuation(sendBtn, o));
         });
       }
     }
@@ -906,7 +922,11 @@
     if (win) text = "⭕ Tic-Tac-Toe: that's game!! Tap to see the final board 🏆";
     else if (!state.includes("-")) text = "⭕ Tic-Tac-Toe: it's a draw. We're too evenly matched 🤝";
     else text = "⭕ Tic-Tac-Toe: your move! Tap to play 👇";
-    sendFromButton(e.currentTarget, text, url, null, IN_IMESSAGE ? bubbleForTtt(state) : null);
+    sendFromButton(e.currentTarget, text, url, null, IN_IMESSAGE ? bubbleForTtt(state) : null).then((o) => {
+      if ((o === "sent" || o === "copied") && !win && state.includes("-")) {
+        document.getElementById("ttt-status").textContent = "Sent ✓ — waiting on their move 😏";
+      }
+    });
   });
 
   document.getElementById("ttt-reset").addEventListener("click", () => {
@@ -919,12 +939,27 @@
   const emojiPuzzleInput = document.getElementById("emoji-puzzle");
   const emojiAnswerInput = document.getElementById("emoji-answer");
 
+  const EMOJI_SPARKS = [
+    "a movie 🍿", "a song 🎵", "a TV show 📺", "a food 🌮",
+    "a place you've been together 🗺️", "an inside joke 🤫",
+    "an animal doing something 🐙", "a celebrity ⭐",
+  ];
+
   function emojiShowCompose() {
     document.getElementById("emoji-compose").classList.remove("hidden");
     document.getElementById("emoji-solve").classList.add("hidden");
+    document.getElementById("emoji-status").textContent = "Write something in pure emoji and let them sweat it out.";
+    document.getElementById("emoji-label").textContent = "Your emoji riddle";
     emojiPuzzleInput.value = "";
     emojiAnswerInput.value = "";
   }
+
+  document.getElementById("emoji-dice").addEventListener("click", () => {
+    tick();
+    const spark = EMOJI_SPARKS[Math.floor(Math.random() * EMOJI_SPARKS.length)];
+    document.getElementById("emoji-label").textContent = `Your emoji riddle — try ${spark}`;
+    emojiPuzzleInput.focus();
+  });
 
   function emojiSubmit() {
     const puzzle = emojiPuzzleInput.value.trim();
@@ -940,7 +975,11 @@
       url,
       null,
       IN_IMESSAGE ? bubbleForEmoji(puzzle) : null
-    );
+    ).then((o) => {
+      if (o === "sent" || o === "copied") {
+        document.getElementById("emoji-status").textContent = "Sent ✓ — waiting on their guess 🧩";
+      }
+    });
   }
 
   document.getElementById("emoji-send").addEventListener("click", emojiSubmit);
@@ -1281,7 +1320,11 @@
       url,
       null,
       IN_IMESSAGE ? bubbleForPict(pictStrokes) : null
-    );
+    ).then((o) => {
+      if (o === "sent" || o === "copied") {
+        document.getElementById("pict-status").textContent = "Sent ✓ — waiting on their guess 👀";
+      }
+    });
   });
 
   function pictReplay() {

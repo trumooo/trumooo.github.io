@@ -77,21 +77,24 @@ button, input { touch-action: manipulation; }
 
 /* ---------- header ---------- */
 
-.header { text-align: center; margin-bottom: 18px; }
+/* Compact one-row header: brand left, date right, tagline lives in the
+   footer — content starts higher on every visit. */
+.header { margin-bottom: 12px; }
 
 .logo-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px 10px;
 }
 
-.logo-coral { font-size: 2rem; }
+.logo-coral { font-size: 1.5rem; }
 
 .header h1 {
   font-family: "Baloo 2", "Nunito", sans-serif;
   font-weight: 800;
-  font-size: 2.6rem;
+  font-size: 1.9rem;
   letter-spacing: -0.02em;
   color: var(--coral-deep);
 }
@@ -100,32 +103,32 @@ button, input { touch-action: manipulation; }
   display: inline-block;
   background: var(--coral);
   color: #fff;
-  border-radius: 14px;
-  padding: 0 12px;
-  margin-left: 4px;
+  border-radius: 10px;
+  padding: 0 9px;
+  margin-left: 3px;
   transform: rotate(-4deg);
   box-shadow: var(--shadow);
 }
 
 .tagline {
   color: var(--ink-soft);
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  margin-top: 2px;
+  margin-bottom: 4px;
 }
 
 .date-chip {
   display: inline-block;
-  margin-top: 10px;
+  margin-left: 6px;
   background: var(--card);
   border: 2px solid var(--peach);
   color: var(--coral-deep);
   font-weight: 800;
-  font-size: 0.8rem;
-  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   border-radius: 999px;
-  padding: 5px 14px;
+  padding: 4px 12px;
 }
 
 /* ---------- tabs ---------- */
@@ -1010,8 +1013,8 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
 
 /* very narrow phones (e.g. iPhone SE) */
 @media (max-width: 350px) {
-  .header h1 { font-size: 2.1rem; }
-  .logo-coral { font-size: 1.6rem; }
+  .header h1 { font-size: 1.7rem; }
+  .logo-coral { font-size: 1.3rem; }
   .tab { font-size: 0.9rem; }
   .tot-option { font-size: 0.9rem; padding: 12px 8px; }
   .score-row { flex-direction: column; }
