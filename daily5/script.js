@@ -751,7 +751,7 @@
     if (outcome !== "sent" && outcome !== "copied") return;
     if (g.id === "battle") {
       // Anagrams-style: both players run the same board — play your round now.
-      battleInit(deckKey || todayKey(), null);
+      battleInit(deckKey || todayKey(), null, null);
       show("battle");
       document.getElementById("battle-status").textContent =
         "Challenge sent! 🎯 Now play your round — then send your score.";
@@ -785,7 +785,7 @@
     if (id === "ttt") { tttInit("---------"); show("ttt"); }
     else if (id === "emoji") { emojiShowCompose(); show("emoji"); }
     else if (id === "pict") { show("pict"); pictShowCompose(); }
-    else if (id === "battle") { battleInit(todayKey(), null); show("battle"); }
+    else if (id === "battle") { battleInit(todayKey(), null, null); show("battle"); }
   }
 
   // ---------- tic-tac-toe ----------
@@ -1341,113 +1341,204 @@
     }
   });
 
-  // ---------- trivia battle ----------
+  // ---------- trivia battle (one-question wizard) ----------
+  // One question per screen, four multiple-choice options (distractors are
+  // other trivia answers, seeded so both players see identical options), a
+  // per-question countdown, and per-question results riding in the link as
+  // a g/m pattern for the side-by-side trail on the results screen.
 
-  let battleKey, battleScore, battleAnswered, battleTheirScore;
+  const BATTLE_TIME = (() => {
+    const n = parseInt(new URLSearchParams(location.search).get("bt"), 10);
+    return n >= 2 && n <= 300 ? n : 20;
+  })();
 
-  function battleInit(dateKey, theirScore) {
+  let battleKey, battleScore, battleIdx, battleTheirScore, battleTheirPattern;
+  let battleQs, battleMyPattern, battleStreak;
+  let battleTimerId = null;
+  let battleTimeLeft = BATTLE_TIME;
+
+  function battleOptions(dateKey, qIdx, correct) {
+    const rand = mulberry32(hashString(`opt:${dateKey}:${qIdx}`));
+    const pool = CONTENT.trivia.map((t) => t.a).filter((a) => a !== correct);
+    const opts = [correct];
+    let guard = 0;
+    while (opts.length < 4 && guard++ < 200) {
+      const cand = pool[Math.floor(rand() * pool.length)];
+      if (!opts.includes(cand)) opts.push(cand);
+    }
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    return opts;
+  }
+
+  function battleTimerStop() {
+    clearInterval(battleTimerId);
+    battleTimerId = null;
+  }
+
+  function battleTimerStart(onTimeout) {
+    battleTimerStop();
+    battleTimeLeft = BATTLE_TIME;
+    const chip = document.getElementById("battle-timer");
+    chip.classList.remove("low", "hidden");
+    chip.textContent = `⏱ 0:${String(battleTimeLeft).padStart(2, "0")}`;
+    battleTimerId = setInterval(() => {
+      if (document.getElementById("view-battle").classList.contains("hidden")) {
+        battleTimerStop();
+        return;
+      }
+      battleTimeLeft--;
+      chip.textContent = `⏱ 0:${String(Math.max(0, battleTimeLeft)).padStart(2, "0")}`;
+      if (battleTimeLeft <= 5) chip.classList.add("low");
+      if (battleTimeLeft <= 0) {
+        battleTimerStop();
+        onTimeout();
+      }
+    }, 1000);
+  }
+
+  function battleRenderPips() {
+    const pips = document.getElementById("battle-pips");
+    pips.innerHTML = "";
+    for (let i = 0; i < 5; i++) {
+      const pip = document.createElement("span");
+      pip.className = "pip";
+      if (i < battleMyPattern.length) {
+        pip.classList.add(battleMyPattern[i] === "g" ? "hit" : "miss");
+        pip.textContent = battleMyPattern[i] === "g" ? "✓" : "✗";
+      } else if (i === battleIdx) {
+        pip.classList.add("current");
+      }
+      pips.appendChild(pip);
+    }
+  }
+
+  function battleInit(dateKey, theirScore, theirPattern) {
     battleKey = dateKey;
     battleTheirScore = theirScore;
+    battleTheirPattern = theirPattern || null;
     battleScore = 0;
-    battleAnswered = 0;
+    battleIdx = 0;
+    battleStreak = 0;
+    battleMyPattern = "";
+    battleQs = battleSet(dateKey);
+    battleTimerStop();
 
     const statusEl = document.getElementById("battle-status");
     if (theirScore !== null) {
       const when = dateKey === todayKey() ? "today's" : `the ${dateKey}`;
-      statusEl.textContent = `Your friend scored ${theirScore}/5 on ${when} battle. Same 5 questions — beat it or eat it. 🔥`;
+      statusEl.textContent = `They scored ${theirScore}/5 on ${when} battle — beat it. 🔥`;
     } else {
-      statusEl.textContent = "Five questions, same for both of you today. Answer honestly — friendship court is in session.";
+      statusEl.textContent = `Same 5 questions for both of you — ${BATTLE_TIME} seconds each. Go!`;
     }
 
-    const arena = document.getElementById("battle-arena");
-    arena.innerHTML = "";
     document.getElementById("battle-send").classList.add("hidden");
     document.getElementById("battle-again").classList.add("hidden");
-    document.getElementById("battle-invite").classList.remove("hidden");
-    const progressEl = document.getElementById("battle-progress");
-    progressEl.classList.add("hidden");
-    progressEl.textContent = "";
+    document.getElementById("battle-invite").classList.add("hidden");
+    document.getElementById("battle-topbar").classList.remove("hidden");
+    battleShowQuestion();
+  }
 
-    battleSet(dateKey).forEach((item, n) => {
-      const el = document.createElement("div");
-      el.className = "battle-q";
-      el.innerHTML = `
-        <p class="qnum">Question ${n + 1} of 5</p>
-        <p class="qtext">${esc(item.q)}</p>
-        <div class="reveal-wrap">
-          <button type="button" class="btn btn-reveal">Reveal answer 👀</button>
-          <p class="answer hidden" aria-live="polite">${esc(item.a)}</p>
-        </div>
-        <div class="score-row hidden">
-          <button type="button" class="btn btn-yes">I got it ✅</button>
-          <button type="button" class="btn btn-no">Missed it ❌</button>
-        </div>`;
-      const revealBtn = el.querySelector(".btn-reveal");
-      revealBtn.addEventListener("click", () => {
-        tick();
-        revealBtn.classList.add("hidden");
-        el.querySelector(".answer").classList.remove("hidden");
-        el.querySelector(".score-row").classList.remove("hidden");
-      });
-      const yes = el.querySelector(".btn-yes");
-      const no = el.querySelector(".btn-no");
-      function pick(gotIt, btn) {
-        if (yes.disabled) return;
-        yes.disabled = no.disabled = true;
-        btn.classList.add("picked");
-        el.dataset.done = "1";
-        if (gotIt) battleScore++;
-        battleAnswered++;
-        tick();
-        const progressEl = document.getElementById("battle-progress");
-        progressEl.classList.remove("hidden");
-        progressEl.textContent =
-          battleAnswered === 5
-            ? "All five answered! 🎉"
-            : `Answered ${battleAnswered} of 5 — finish them all, then send your score.`;
-        if (battleAnswered === 5) {
-          battleFinish();
-        } else {
-          // Carry the player to the next unanswered question.
-          const next = arena.querySelector(".battle-q:not([data-done])");
-          if (next) {
-            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            next.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
-          }
-        }
-      }
-      yes.addEventListener("click", () => pick(true, yes));
-      no.addEventListener("click", () => pick(false, no));
-      arena.appendChild(el);
+  function battleShowQuestion() {
+    const arena = document.getElementById("battle-arena");
+    const item = battleQs[battleIdx];
+    battleRenderPips();
+
+    const el = document.createElement("div");
+    el.className = "battle-q wizard";
+    el.innerHTML = `
+      <p class="qnum">Question ${battleIdx + 1} of 5</p>
+      <p class="qtext">${esc(item.q)}</p>
+      <div class="battle-opts"></div>`;
+    const optsEl = el.querySelector(".battle-opts");
+    const opts = battleOptions(battleKey, battleIdx, item.a);
+    opts.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "opt";
+      btn.textContent = opt;
+      btn.addEventListener("click", () => battleAnswer(opt, btn, optsEl, item.a));
+      optsEl.appendChild(btn);
     });
+    arena.innerHTML = "";
+    arena.appendChild(el);
+
+    battleTimerStart(() => battleAnswer(null, null, optsEl, item.a));
+  }
+
+  function battleAnswer(choice, chosenBtn, optsEl, correct) {
+    if (optsEl.dataset.done) return;
+    optsEl.dataset.done = "1";
+    battleTimerStop();
+    tick();
+
+    const right = choice === correct;
+    battleMyPattern += right ? "g" : "m";
+    if (right) {
+      battleScore++;
+      battleStreak++;
+      if (battleStreak >= 3) toast(`🔥 ${battleStreak} in a row!`);
+    } else {
+      battleStreak = 0;
+    }
+
+    optsEl.querySelectorAll(".opt").forEach((btn) => {
+      btn.disabled = true;
+      if (btn.textContent === correct) btn.classList.add("right");
+      else if (btn === chosenBtn) btn.classList.add("wrong");
+    });
+    battleRenderPips();
+
+    battleIdx++;
+    setTimeout(() => {
+      if (battleIdx < 5) battleShowQuestion();
+      else battleFinish();
+    }, 1000);
+  }
+
+  function battleTrail(pattern) {
+    return [...pattern]
+      .map((c) => `<span class="${c === "g" ? "hit" : "miss"}">${c === "g" ? "✓" : "✗"}</span>`)
+      .join("");
   }
 
   function battleFinish() {
+    battleTimerStop();
+    document.getElementById("battle-timer").classList.add("hidden");
+    battleRenderPips();
     const arena = document.getElementById("battle-arena");
     const result = document.createElement("div");
     result.className = "battle-result";
     result.setAttribute("aria-live", "polite");
+
+    let trails = `<div class="trail-row"><span class="trail-label">You</span><span class="trail">${battleTrail(battleMyPattern)}</span></div>`;
+    if (battleTheirPattern) {
+      trails += `<div class="trail-row"><span class="trail-label">Them</span><span class="trail">${battleTrail(battleTheirPattern)}</span></div>`;
+    }
+
     if (battleTheirScore !== null) {
       const verdict =
         battleScore > battleTheirScore ? "Victory is yours 👑" :
         battleScore < battleTheirScore ? "Ouch... they got you this time 💀" :
         "Dead tie. The rivalry continues 🤝";
-      result.innerHTML = `<p class="big">You ${battleScore} — ${battleTheirScore} Them</p><p>${verdict}</p>`;
-      // An older challenge link? Offer today's fresh set afterwards.
+      result.innerHTML = `<p class="big">You ${battleScore} — ${battleTheirScore} Them</p>${trails}<p>${verdict}</p>`;
       if (battleKey !== todayKey()) {
         document.getElementById("battle-again").classList.remove("hidden");
       }
     } else {
-      result.innerHTML = `<p class="big">${battleScore}/5 🎯</p><p>Now send your score and make them play.</p>`;
+      result.innerHTML = `<p class="big">${battleScore}/5 🎯</p>${trails}<p>Now send your score and make them play.</p>`;
     }
+    arena.innerHTML = "";
     arena.appendChild(result);
-    result.scrollIntoView({ behavior: "smooth", block: "center" });
     document.getElementById("battle-send").classList.remove("hidden");
+    document.getElementById("battle-invite").classList.remove("hidden");
   }
 
   document.getElementById("battle-send").addEventListener("click", (e) => {
     const when = battleKey === todayKey() ? "today's questions" : `the ${battleKey} questions`;
-    const url = `${BASE_URL}#battle=${battleKey}.${battleScore}`;
+    const url = `${BASE_URL}#battle=${battleKey}.${battleScore}.${battleMyPattern}`;
     sendFromButton(
       e.currentTarget,
       `⚔️ Trivia Battle: I scored ${battleScore}/5 on ${when}. Your turn — tap to play the same set 👇`,
@@ -1459,11 +1550,11 @@
 
   document.getElementById("battle-again").addEventListener("click", () => {
     clearHash();
-    battleInit(todayKey(), null);
+    battleInit(todayKey(), null, null);
   });
 
-  // Shareable before you've played: sends the same challenge link as the
-  // games-list Invite button, pinned to this battle's question set.
+  // Shareable from the results screen: sends the same challenge link as the
+  // games-grid tile, pinned to this battle's question set.
   document.getElementById("battle-invite").addEventListener("click", (e) => {
     const g = GAMES.find((game) => game.id === "battle");
     const url = `${BASE_URL}#g=battle.${battleKey || todayKey()}`;
@@ -1504,7 +1595,7 @@
         if (gid === "battle") {
           const target = gDate && withinDays(gDate, 2) ? gDate : todayKey();
           if (target !== deckKey) renderDeck(target);
-          battleInit(target, null);
+          battleInit(target, null, null);
           show("battle");
         } else {
           openGame(gid);
@@ -1528,11 +1619,14 @@
         if (word && word.trim() && strokes) { pictShowSolve(word.trim(), strokes); return; }
       }
     } else if (kind === "battle") {
-      const m = val.match(/^(\d{4}-\d{2}-\d{2})\.([0-5])$/);
+      const m = val.match(/^(\d{4}-\d{2}-\d{2})\.([0-5])(?:\.([gm]{5}))?$/);
       if (m) {
         const target = withinDays(m[1], 2) ? m[1] : todayKey();
         if (target !== deckKey) renderDeck(target);
-        battleInit(m[1], parseInt(m[2], 10));
+        const score = parseInt(m[2], 10);
+        // The pattern is only trusted if it agrees with the score.
+        const pattern = m[3] && [...m[3]].filter((c) => c === "g").length === score ? m[3] : null;
+        battleInit(m[1], score, pattern);
         show("battle");
         return;
       }

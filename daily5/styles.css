@@ -818,14 +818,101 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
 
 .pict-reveal-wrap { margin-top: 14px; }
 
-/* trivia battle */
-.battle-progress {
+/* trivia battle (one-question wizard) */
+.battle-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.battle-pips { display: flex; gap: 8px; }
+
+.pip {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: "Baloo 2", sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
-  color: var(--teal);
-  margin: -8px 0 14px;
+  background: var(--peach);
+  color: transparent;
 }
+
+.pip.current { box-shadow: 0 0 0 3px var(--coral); background: var(--card); }
+.pip.hit { background: var(--teal); color: #fff; }
+.pip.miss { background: var(--coral-dark); color: #fff; }
+
+.battle-opts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.battle-opts .opt {
+  min-width: 0;
+  background: var(--peach);
+  color: var(--coral-deep);
+  font-family: "Nunito", sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  text-align: center;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  padding: 14px 10px;
+  min-height: 58px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+
+.battle-opts .opt:not(:disabled):hover { border-color: var(--coral); }
+.battle-opts .opt:active { transform: scale(0.96); }
+.battle-opts .opt:disabled { cursor: default; }
+.battle-opts .opt.right { background: var(--teal); color: #fff; animation: pop 0.25s ease; }
+.battle-opts .opt.wrong { background: var(--coral-dark); color: #fff; }
+.battle-opts .opt:disabled:not(.right):not(.wrong) { opacity: 0.45; }
+
+.trail-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.trail-label {
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  width: 42px;
+  text-align: right;
+}
+
+.trail { display: flex; gap: 6px; }
+
+.trail span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Baloo 2", sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #fff;
+}
+
+.trail .hit { background: var(--teal); }
+.trail .miss { background: var(--coral-dark); }
 
 .battle-q {
   background: var(--card);
@@ -930,6 +1017,8 @@ button.tot-option.mine { border-color: var(--coral-dark); background: var(--cora
   .score-row { flex-direction: column; }
   .color-dot { width: 28px; height: 28px; }
   .pict-colors { gap: 6px; }
+  .pip { width: 26px; height: 26px; font-size: 0.75rem; }
+  .battle-pips { gap: 6px; }
 }
 
 /* compact layout inside the Messages drawer (?imsg=1) */
