@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WordScroll terms of use</title>
+<link rel="icon" href="/wordscroll/icon.png">
+<style>
+@font-face { font-family: 'Nunito'; font-weight: 400; src: url(/wordscroll/fonts/Nunito-400.ttf) format('truetype'); font-display: swap; }
+@font-face { font-family: 'Nunito'; font-weight: 900; src: url(/wordscroll/fonts/Nunito-900.ttf) format('truetype'); font-display: swap; }
+@font-face { font-family: 'Shantell'; font-weight: 800; src: url(/wordscroll/fonts/Shantell-800.ttf) format('truetype'); font-display: swap; }
+:root { --royal: #2458B8; --foot: #1E4A9B; --ink: #202B40; --muted: #5B6680; --paper: #F4F7FC; --card: #FFFFFF; --rule: #DCE3F0; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink: #E8EDF7; --muted: #A9B4CC; --paper: #0F1830; --card: #16213F; --rule: #2A3658; }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.6 'Nunito', system-ui, -apple-system, sans-serif; }
+header { position: relative; color: #fff; }
+header .sea { position: absolute; inset: 0 0 auto 0; height: 190px; width: 100%; display: block; }
+header .bar { position: relative; max-width: 760px; margin: 0 auto; padding: 22px 20px 0; display: flex; align-items: center; gap: 12px; }
+header .bar img { width: 44px; height: 44px; border-radius: 11px; box-shadow: 0 0 0 2px rgba(255,255,255,0.85); }
+header .bar a { color: #fff; text-decoration: none; font: 800 24px/1 'Shantell', 'Nunito', sans-serif; letter-spacing: -0.3px; }
+main { position: relative; max-width: 760px; margin: 72px auto 40px; padding: 28px 22px 32px; background: var(--card); border-radius: 22px; box-shadow: 0 10px 30px rgba(32,43,64,0.10); }
+h1, h2, h3 { font-family: 'Shantell', 'Nunito', sans-serif; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
+h1 { font-size: 32px; margin: 0 0 14px; }
+h2 { font-size: 22px; margin: 32px 0 8px; }
+h3 { font-size: 18px; margin: 22px 0 6px; }
+a { color: var(--royal); }
+@media (prefers-color-scheme: dark) { a { color: #8FB1F2; } }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 24px 0; }
+ul, ol { padding-left: 22px; }
+li { margin: 4px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--rule); padding: 8px 10px; text-align: left; vertical-align: top; }
+blockquote { margin: 16px 0; padding: 4px 16px; border-left: 4px solid var(--royal); color: var(--muted); }
+code { font-size: 0.92em; }
+footer { max-width: 760px; margin: 0 auto 48px; padding: 0 20px; color: var(--muted); font-size: 14px; text-align: center; }
+footer a { color: inherit; }
+@media (max-width: 520px) { main { margin: 60px 12px 32px; border-radius: 18px; padding: 22px 16px 26px; } h1 { font-size: 27px; } body { font-size: 16px; } }
+</style>
+</head>
+<body>
+<header><svg class="sea" viewBox="0 0 1200 190" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H1200 L1200 160.0 L1180 157.5 L1160 155.1 L1140 152.9 L1120 151.1 L1100 149.6 L1080 148.6 L1060 148.1 L1040 148.1 L1020 148.6 L1000 149.6 L980 151.1 L960 152.9 L940 155.1 L920 157.5 L900 160.0 L880 162.5 L860 164.9 L840 167.1 L820 168.9 L800 170.4 L780 171.4 L760 171.9 L740 171.9 L720 171.4 L700 170.4 L680 168.9 L660 167.1 L640 164.9 L620 162.5 L600 160.0 L580 157.5 L560 155.1 L540 152.9 L520 151.1 L500 149.6 L480 148.6 L460 148.1 L440 148.1 L420 148.6 L400 149.6 L380 151.1 L360 152.9 L340 155.1 L320 157.5 L300 160.0 L280 162.5 L260 164.9 L240 167.1 L220 168.9 L200 170.4 L180 171.4 L160 171.9 L140 171.9 L120 171.4 L100 170.4 L80 168.9 L60 167.1 L40 164.9 L20 162.5 L0 160.0 Z" fill="#1E4A9B"/><path d="M0 0 H1200 L1200 150.0 L1180 147.5 L1160 145.1 L1140 142.9 L1120 141.1 L1100 139.6 L1080 138.6 L1060 138.1 L1040 138.1 L1020 138.6 L1000 139.6 L980 141.1 L960 142.9 L940 145.1 L920 147.5 L900 150.0 L880 152.5 L860 154.9 L840 157.1 L820 158.9 L800 160.4 L780 161.4 L760 161.9 L740 161.9 L720 161.4 L700 160.4 L680 158.9 L660 157.1 L640 154.9 L620 152.5 L600 150.0 L580 147.5 L560 145.1 L540 142.9 L520 141.1 L500 139.6 L480 138.6 L460 138.1 L440 138.1 L420 138.6 L400 139.6 L380 141.1 L360 142.9 L340 145.1 L320 147.5 L300 150.0 L280 152.5 L260 154.9 L240 157.1 L220 158.9 L200 160.4 L180 161.4 L160 161.9 L140 161.9 L120 161.4 L100 160.4 L80 158.9 L60 157.1 L40 154.9 L20 152.5 L0 150.0 Z" fill="#2458B8"/></svg><div class="bar"><img src="/wordscroll/icon.png" alt=""><a href="/wordscroll/">WordScroll</a></div></header>
+<main>
+<h1>WordScroll — Terms of Use</h1>
+<p><strong>Effective date:</strong> October 25, 2026<br />
+<strong>Published by:</strong> Henry Truman Cunningham, United States<br />
+<strong>Contact:</strong> wordscroll-support@jelly.fish  </p>
+<h2>1. What WordScroll is</h2>
+<p>WordScroll is a vocabulary app. It ships a fixed set of word cards inside the
+download and works without a network connection. It has no accounts, no
+sign-in and no server that stores your progress.</p>
+<h2>2. What Plus is</h2>
+<p>WordScroll Plus unlocks the paid features described on the purchase screen you
+came from: all of Practice, with the Reading Level Test and your reading
+level's full report; no daily cap on new words or saves, and the top daily
+pace; every word pack; and every example and synonym on every card.</p>
+<p>The free plan keeps working exactly as it does today, and Earshot, the daily
+spelling bee, stays free once a day. <strong>Your saved words are never locked
+behind Plus</strong> — including words you saved while subscribed, after a
+subscription ends.</p>
+<h2>3. Plans, prices and billing</h2>
+<p>Plus is sold as an auto-renewing subscription or as a one-time lifetime
+purchase.</p>
+<p>Every price, plan length and renewal term is shown to you by the app store on
+the purchase screen before you confirm, in your own currency. WordScroll
+displays what the store reports and never quotes a price of its own.</p>
+<p>Subscriptions renew automatically at the end of each period unless cancelled,
+and the store charges the payment method on your store account. Payment is
+charged to your Apple Account at confirmation of purchase. Your account is
+charged for renewal within 24 hours before the end of the current period,
+unless auto-renew is turned off at least 24 hours before that point.</p>
+<h2>4. Introductory offers</h2>
+<p>Some plans carry an introductory offer — a trial period, or a reduced price
+for the first period. <strong>Whether you can receive one is decided by the app
+store, not by WordScroll</strong>, and the store allows one introductory offer per
+subscription group per account.</p>
+<p>The app asks the store before it draws any offer, so if you have already used
+yours you will see the regular price and no offer wording. When a trial period
+is offered and you do not cancel before it ends, the plan converts and the
+store charges the price shown on the purchase screen. Any unused portion of a
+free trial is forfeited if you purchase a subscription during the trial.</p>
+<h2>5. Cancelling</h2>
+<p>You cancel in your app store account settings, not in WordScroll — the store
+owns the subscription, so it is the only place a cancellation takes effect.
+The app links to that screen from Settings and from its trial reminder.</p>
+<p>Cancelling stops the next renewal; access continues until the end of the
+period you have already paid for. When it ends, the app returns to the free
+plan: the daily cap and the free pace come back; Practice, the premium packs
+and the extra examples and synonyms lock again; and Earshot stays free once a
+day. <strong>Your streak, your saved words and your progress are not touched.</strong></p>
+<h2>6. Restoring a purchase</h2>
+<p>Purchases belong to your app store account, so a new device or a reinstall
+restores them. Tap <strong>Restore purchases</strong> on any purchase screen or in Settings.
+If the store finds nothing on that account, the app tells you so plainly and
+nothing changes.</p>
+<h2>7. Refunds</h2>
+<p>Payments are processed by the app store, so refunds are requested from the
+store and are decided under its policy. WordScroll cannot see your payment
+details and cannot issue a refund itself. Your purchase is also governed by
+the app store's own terms of sale.</p>
+<h2>8. Acceptable use</h2>
+<p>The word content in the app is licensed to you for personal study. You may not
+redistribute, resell or bulk-extract the word database, or reverse-engineer
+the app except where that right cannot be excluded by law. You may share
+individual word cards using the app's own share feature.</p>
+<h2>9. The app is provided as it is</h2>
+<p>WordScroll is an educational tool, not an assessment. It makes no promise
+about exam results, career outcomes or income. Any research cited in the app
+is cited with its source and describes findings across populations, not
+predictions about you.</p>
+<p>To the extent permitted by law, the app is provided "as is", without
+warranties of any kind, and our total liability for any claim relating to it
+is limited to the amount you paid for it in the twelve months before the
+claim. Nothing here limits liability that cannot be limited by law, including
+for death, personal injury or fraud.</p>
+<h2>10. Apple's required terms</h2>
+<p>These terms are between you and Henry Truman Cunningham, not Apple.
+Apple is not responsible for the app or its content.</p>
+<ul>
+<li>Apple has no obligation to furnish maintenance or support for the app.</li>
+<li>If the app fails to conform to any applicable warranty, you may notify
+  Apple, and Apple will refund the purchase price of the app; to the maximum
+  extent permitted by law, Apple has no other warranty obligation.</li>
+<li>Henry Truman Cunningham, not Apple, is responsible for addressing any
+  claims relating to the app, including product liability claims, claims that
+  the app fails to conform to a legal or regulatory requirement, and claims
+  arising under consumer protection or similar legislation.</li>
+<li>Henry Truman Cunningham, not Apple, is responsible for the
+  investigation, defence, settlement and discharge of any third-party
+  intellectual property infringement claim relating to the app.</li>
+<li>You represent that you are not located in a country subject to a U.S.
+  Government embargo or designated as "terrorist supporting", and that you are
+  not on any U.S. Government list of prohibited or restricted parties.</li>
+<li>Apple and Apple's subsidiaries are third-party beneficiaries of these terms
+  and, upon your acceptance, will have the right to enforce them against you.</li>
+</ul>
+<h2>11. Changes</h2>
+<p>If these terms change, the new version ships with an app update and the
+purchase screens show it from that version onward. A price change on an
+existing subscription is handled by the app store, which asks you to agree
+before it takes effect.</p>
+<h2>12. Governing law and contact</h2>
+<p>These terms are governed by the laws of the State of Texas, United States, without
+regard to conflict-of-law rules, and without depriving you of the protection
+of mandatory consumer law where you live.</p>
+<p>wordscroll-support@jelly.fish</p>
+</main>
+<footer><a href="/wordscroll/support/">Support</a> · <a href="/wordscroll/privacy/">Privacy policy</a> · <a href="/wordscroll/terms/">Terms of use</a><br>© 2026 Henry Truman Cunningham</footer>
+</body>
+</html>
