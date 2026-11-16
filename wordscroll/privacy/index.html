@@ -45,15 +45,16 @@ footer a { color: inherit; }
 <main>
 <h1>WordScroll — Privacy Policy</h1>
 <p><strong>Effective date:</strong> October 25, 2026<br />
-<strong>Last updated:</strong> November 11, 2026<br />
+<strong>Last updated:</strong> November 15, 2026<br />
 <strong>Published by:</strong> Henry Truman Cunningham, United States<br />
 <strong>Contact:</strong> wordscroll-support@jelly.fish  </p>
 <h2>1. The short version</h2>
 <p>WordScroll has no accounts and no sign-in, so there is nothing here that
 identifies you. Your words, goal, streak, saved cards and settings are stored
-on your device. Four things leave it: the purchase check the app store needs
-(§4), the app's requests to our word server, and two kinds of anonymous
-report, usage counts and crash reports (§5). At launch the app
+on your device. Five things leave it: the purchase check the app store needs
+(§4), the app's requests to our word server, the sentences you type in
+In a Sentence (sent to be marked, and the mark comes straight back: §3), and
+two kinds of anonymous report, usage counts and crash reports (§5). At launch the app
 asks for definition updates (corrections to the words it carries), sending
 only this build's content id and the number of the last update it holds; the
 first time you meet a word, it downloads that word's recorded pronunciation.
@@ -64,6 +65,11 @@ to run and secure the service. Nothing uses them to identify you or to work
 out where you are.</p>
 <p>We do not sell your data. We do not share it with data brokers. We run no
 advertising, and the app contains no advertising SDK.</p>
+<p>The companies that receive data from the app are RevenueCat (§4), Supabase
+(above, and for the marking service in §3), Anthropic (§3), Google and Sentry
+(§5). Each receives only what this policy says, as a processor working for
+us, under terms that bind it to give that data the same protection as this
+policy, and to use it only to provide its service to us.</p>
 <h2>2. What stays on your device</h2>
 <p>Everything you make in the app is device-local:</p>
 <ul>
@@ -71,7 +77,7 @@ advertising, and the app contains no advertising SDK.</p>
 <li>your daily goal, level and chosen word packs;</li>
 <li>your streak, quiz history and daily progress;</li>
 <li>your theme, voice accent and word-drop schedule;</li>
-<li>the sentences you say in In a Sentence, and their marks (each sentence goes
+<li>the sentences you type in In a Sentence, and their marks (each sentence goes
   out once, to be marked, and comes straight back: see section 3);</li>
 <li>how far you got in onboarding.</li>
 </ul>
@@ -85,14 +91,9 @@ your phone.</p>
 It does not read your location, photos, camera, health data or address book.
 It never asks for permission to read or use any of them, so iOS does not give
 it access.</p>
-<p>The one thing it listens to is you, in In a Sentence, a practice mode in
-WordScroll Plus: you tap the mic and say a sentence with the day's word. The
-first time, iOS asks whether WordScroll may use the microphone and speech
-recognition, and you can say no and type the sentence instead. Your phone
-turns what you say into text with Apple's speech recognition, on the phone
-where it can and otherwise on Apple's servers under Apple's own privacy
-policy. WordScroll never records the audio, and no audio leaves the app. The
-written sentence, the word and its dictionary definition are sent to our
+<p>It does not use the microphone or speech recognition either: in In a Sentence,
+a practice mode in WordScroll Plus, you type a sentence with the day's word.
+That sentence, the word and its dictionary definition are sent to our
 marking service, which has an AI model (Anthropic's Claude, through
 Anthropic's API) mark the sentence, and the mark comes back to your phone.
 Before the first sentence is sent, the app asks whether you allow this, and
@@ -101,14 +102,15 @@ Your data. Anthropic, as the model's provider, keeps what the API is sent for up
 days under its API data retention policy, longer only where the law or its
 safety review requires, and never to train its models. The sentence is used to answer you and is not stored by us; what our
 service keeps is a count of sentences a day for each installation, so the
-feature cannot be run up, and nothing that identifies you. The microphone is
-on only while you are saying a sentence.</p>
+feature cannot be run up, and nothing that identifies you.</p>
 <p>It can add one thing to your photos, and only when you ask: share a word card,
 choose Save Image in the share sheet, and iOS asks you once whether WordScroll
 may add to your photos. That lets it save the picture; it never lets it see
 your library. Apple also requires the app to carry a second photo-library
 permission text because of a library it ships; the app never uses that
-permission, never asks for it, and the text says so.</p>
+permission, never asks for it, and the text says so. For the same reason it
+carries permission texts for the microphone and speech recognition, which it
+never asks for either, so iOS never shows them.</p>
 <h2>4. Purchases</h2>
 <p>Payment is handled entirely by the app store. WordScroll never sees a card
 number, a name or a billing address.</p>
@@ -120,7 +122,8 @@ WordScroll Plus, and whether an introductory offer is available to it.</p>
   purchase identifier that RevenueCat generates for the installation. We do
   not supply a user id, because the app has none.</li>
 <li><strong>What it is used for:</strong> unlocking Plus features, restoring purchases on a
-  new device, and deciding whether to show trial wording. Nothing else.</li>
+  new device, and deciding whether to show trial wording; the usage counts in
+  §5 also say which plan the installation is on. Nothing else.</li>
 <li><strong>What it is not used for:</strong> advertising, profiling, or tracking you across
   other apps or websites.</li>
 <li><strong>Retention:</strong> RevenueCat retains subscriber and transaction records for the
@@ -133,9 +136,16 @@ WordScroll Plus, and whether an introductory offer is available to it.</p>
 <p>The app sends two kinds of report. Neither carries your name, an email
 address, an account or anything you have written in the app.</p>
 <p><strong>Usage counts.</strong> The app uses Google Analytics for Firebase, from Google, to
-count how WordScroll is used: how far the first-run questions go, which
-features are used (reading, saving and practicing words, sharing, reminders,
-the plans screen) and whether a day's goal is met. Each
+count how WordScroll is used: how far the first-run questions go and what you
+choose on them, which features are used (reading, swiping, saving, hearing and
+practicing words, sharing, reminders, the home-screen widget, the plans
+screen) and whether a day's goal is met. The counts also carry the reading
+level, daily goal, topics and other settings you chose, whether you are on the
+free plan, a trial or Plus, your last Reading Level Test grade and about how
+many words you know. For each word you meet they say how hard it is (its
+level, and how that compares with yours), its topics and its part of speech,
+but not the word itself. For each practice game or test they say how it went:
+rounds played, right and missed, and how hard its words were. Each
 report carries a random number Firebase makes for this installation of the
 app, the device model, the system version and the app version. Google works
 out an approximate location (country and region) from the connection's IP
@@ -198,7 +208,8 @@ elsewhere, the purchase check described in §4 is transferred there. Our word
 server (§1) runs in Canada, in Supabase's Canada Central region, so its
 requests and their logs are processed there wherever you use the app. Google
 processes the usage counts, and Sentry the crash reports (§5), on servers in
-the United States.</p>
+the United States. Anthropic marks the sentences sent from In a Sentence (§3)
+on its own servers, outside Canada.</p>
 <h2>11. Changes to this policy</h2>
 <p>If this policy changes, the new version ships with an app update — the copy
 inside the app is part of the binary, so what you read in the app always
