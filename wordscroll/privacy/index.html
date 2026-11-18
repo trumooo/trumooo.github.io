@@ -45,7 +45,7 @@ footer a { color: inherit; }
 <main>
 <h1>WordScroll — Privacy Policy</h1>
 <p><strong>Effective date:</strong> October 25, 2026<br />
-<strong>Last updated:</strong> November 17, 2026<br />
+<strong>Last updated:</strong> November 18, 2026<br />
 <strong>Published by:</strong> Henry Truman Cunningham, United States<br />
 <strong>Contact:</strong> wordscroll-support@jelly.fish  </p>
 <h2>1. The short version</h2>
@@ -118,12 +118,15 @@ number, a name or a billing address.</p>
 store two questions: whether the store account currently running the app owns
 WordScroll Plus, and whether an introductory offer is available to it.</p>
 <ul>
-<li><strong>What is sent:</strong> the app store's own purchase receipt and an anonymous
-  purchase identifier that RevenueCat generates for the installation. We do
-  not supply a user id, because the app has none.</li>
+<li><strong>What is sent:</strong> the app store's own purchase receipt, an anonymous
+  purchase identifier that RevenueCat generates for the installation, and the
+  random number Google Analytics for Firebase makes for this installation
+  (§5). We do not supply a user id, because the app has none.</li>
 <li><strong>What it is used for:</strong> unlocking Plus features, restoring purchases on a
   new device, and deciding whether to show trial wording; the usage counts in
-  §5 also say which plan the installation is on. Nothing else.</li>
+  §5 also say which plan the installation is on, and RevenueCat adds the
+  installation's trials, purchases, renewals, cancellations and refunds to
+  them, under that random number. Nothing else.</li>
 <li><strong>What it is not used for:</strong> advertising, profiling, or tracking you across
   other apps or websites.</li>
 <li><strong>Retention:</strong> RevenueCat retains subscriber and transaction records for the
