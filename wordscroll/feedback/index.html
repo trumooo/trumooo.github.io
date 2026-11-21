@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; font-src 'self'; img-src 'self'; connect-src https://api.jelly.fish; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>WordScroll feedback board</title>
+<link rel="icon" href="/wordscroll/icon.png">
+<style>
+@font-face { font-family: 'Nunito'; font-weight: 400; src: url(/wordscroll/fonts/Nunito-400.ttf) format('truetype'); font-display: swap; }
+@font-face { font-family: 'Nunito'; font-weight: 900; src: url(/wordscroll/fonts/Nunito-900.ttf) format('truetype'); font-display: swap; }
+@font-face { font-family: 'Shantell'; font-weight: 800; src: url(/wordscroll/fonts/Shantell-800.ttf) format('truetype'); font-display: swap; }
+:root { --royal: #2458B8; --foot: #1E4A9B; --ink: #202B40; --muted: #5B6680; --paper: #F4F7FC; --card: #FFFFFF; --rule: #DCE3F0; }
+@media (prefers-color-scheme: dark) {
+  :root { --ink: #E8EDF7; --muted: #A9B4CC; --paper: #0F1830; --card: #16213F; --rule: #2A3658; }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 17px/1.6 'Nunito', system-ui, -apple-system, sans-serif; }
+header { position: relative; color: #fff; }
+header .sea { position: absolute; inset: 0 0 auto 0; height: 190px; width: 100%; display: block; }
+header .bar { position: relative; max-width: 760px; margin: 0 auto; padding: 22px 20px 0; display: flex; align-items: center; gap: 12px; }
+header .bar img { width: 44px; height: 44px; border-radius: 11px; box-shadow: 0 0 0 2px rgba(255,255,255,0.85); }
+header .bar a { color: #fff; text-decoration: none; font: 800 24px/1 'Shantell', 'Nunito', sans-serif; letter-spacing: -0.3px; }
+main { position: relative; max-width: 760px; margin: 72px auto 40px; padding: 28px 22px 32px; background: var(--card); border-radius: 22px; box-shadow: 0 10px 30px rgba(32,43,64,0.10); }
+h1, h2, h3 { font-family: 'Shantell', 'Nunito', sans-serif; font-weight: 800; letter-spacing: -0.3px; line-height: 1.2; }
+h1 { font-size: 32px; margin: 0 0 14px; }
+h2 { font-size: 22px; margin: 32px 0 8px; }
+h3 { font-size: 18px; margin: 22px 0 6px; }
+a { color: var(--royal); }
+@media (prefers-color-scheme: dark) { a { color: #8FB1F2; } }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 24px 0; }
+ul, ol { padding-left: 22px; }
+li { margin: 4px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; display: block; overflow-x: auto; }
+th, td { border: 1px solid var(--rule); padding: 8px 10px; text-align: left; vertical-align: top; }
+blockquote { margin: 16px 0; padding: 4px 16px; border-left: 4px solid var(--royal); color: var(--muted); }
+code { font-size: 0.92em; }
+footer { max-width: 760px; margin: 0 auto 48px; padding: 0 20px; color: var(--muted); font-size: 14px; text-align: center; }
+footer a { color: inherit; }
+@media (max-width: 520px) { main { margin: 60px 12px 32px; border-radius: 18px; padding: 22px 16px 26px; } h1 { font-size: 27px; } body { font-size: 16px; } }
+/* The feedback board, in the site's two boards (store/site/build.py's CSS sets the inks). */
+:root { --accent: #2458B8; --on-accent: #FFFFFF; --foot-key: #1E4A9B; --danger: #C0392B; --good: #0F7A4A; --field: #FFFFFF; --line: #5F6B80; }
+@media (prefers-color-scheme: dark) {
+  :root { --accent: #8FBCEC; --on-accent: #0B1219; --foot-key: #759AC2; --danger: #F2907F; --good: #79D6A4; --field: #0F1830; --line: #8E9A93; }
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.lede { font-size: 1.06em; }
+.plain, .quiet { color: var(--muted); }
+.quiet { font-size: 0.92em; margin: 6px 0 0; }
+.foot { margin-top: 28px; }
+[hidden] { display: none !important; }
+.panel { border: 2px solid var(--rule); border-radius: 18px; padding: 18px 18px 20px; margin: 26px 0 0; }
+.panel h2 { margin-top: 0; }
+label { display: block; font-weight: 900; margin: 16px 0 6px; }
+.opt { font-weight: 400; color: var(--muted); }
+input[type="text"], input[type="email"], textarea {
+  width: 100%; font: inherit; color: var(--ink); background: var(--field); border: 2px solid var(--line); border-radius: 12px;
+  padding: 11px 12px; min-height: 44px; -webkit-appearance: none; appearance: none;
+}
+textarea { resize: vertical; line-height: 1.45; }
+input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.key {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; margin-top: 16px; padding: 10px 24px 12px;
+  font: 800 19px/1 'Shantell', 'Nunito', sans-serif; color: var(--on-accent); background: var(--accent); border: 0; border-radius: 16px;
+  box-shadow: 0 5px 0 var(--foot-key); cursor: pointer;
+}
+.key:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--foot-key); }
+.key[disabled] { opacity: 0.55; cursor: default; }
+.said { min-height: 1.5em; margin: 12px 0 0; font-weight: 900; }
+.said.bad { color: var(--danger); }
+.said.good { color: var(--good); }
+.group { margin-top: 30px; }
+.group h3 { font-size: 20px; margin: 0 0 4px; }
+.group .about { color: var(--muted); font-size: 0.92em; margin: 0 0 10px; }
+.idea { display: grid; grid-template-columns: 64px 1fr; gap: 4px 14px; padding: 14px 0; border-top: 1px solid var(--rule); }
+.idea:first-of-type { border-top: 0; }
+.vote {
+  grid-row: span 3; align-self: start; width: 64px; min-height: 64px; padding: 8px 4px 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font: 800 20px/1 'Shantell', 'Nunito', sans-serif; color: var(--accent); background: var(--field); border: 2px solid var(--accent); border-radius: 14px;
+  box-shadow: 0 4px 0 var(--foot-key); cursor: pointer;
+}
+.vote svg { width: 20px; height: 12px; display: block; }
+.vote[aria-pressed="true"] { color: var(--on-accent); background: var(--accent); }
+.vote:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--foot-key); }
+.idea h4 { margin: 0; font: 900 1.05em/1.3 'Nunito', system-ui, sans-serif; overflow-wrap: anywhere; }
+.idea .body { margin: 0; color: var(--muted); white-space: pre-line; overflow-wrap: anywhere; }
+.idea .note { margin: 6px 0 0; padding: 8px 12px; border-left: 4px solid var(--accent); background: var(--paper); border-radius: 0 10px 10px 0; overflow-wrap: anywhere; }
+.idea .note b { display: block; font-size: 0.85em; color: var(--muted); }
+.idea .more { grid-column: 2; }
+.link { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; min-height: 44px; text-decoration: underline; cursor: pointer; text-align: left; }
+.follow { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-top: 4px; }
+.follow label { flex: 1 0 100%; margin: 4px 0 0; }
+.follow input { flex: 1 1 180px; }
+.follow .key { margin-top: 0; min-height: 44px; font-size: 17px; padding: 8px 18px 10px; }
+.empty { color: var(--muted); padding: 10px 0 0; }
+@media (max-width: 380px) { .idea { grid-template-columns: 56px 1fr; gap: 4px 10px; } .vote { width: 56px; min-height: 60px; } .panel { padding: 14px 14px 16px; } }
+</style>
+</head>
+<body>
+<header><svg class="sea" viewBox="0 0 1200 190" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0 H1200 L1200 160.0 L1180 157.5 L1160 155.1 L1140 152.9 L1120 151.1 L1100 149.6 L1080 148.6 L1060 148.1 L1040 148.1 L1020 148.6 L1000 149.6 L980 151.1 L960 152.9 L940 155.1 L920 157.5 L900 160.0 L880 162.5 L860 164.9 L840 167.1 L820 168.9 L800 170.4 L780 171.4 L760 171.9 L740 171.9 L720 171.4 L700 170.4 L680 168.9 L660 167.1 L640 164.9 L620 162.5 L600 160.0 L580 157.5 L560 155.1 L540 152.9 L520 151.1 L500 149.6 L480 148.6 L460 148.1 L440 148.1 L420 148.6 L400 149.6 L380 151.1 L360 152.9 L340 155.1 L320 157.5 L300 160.0 L280 162.5 L260 164.9 L240 167.1 L220 168.9 L200 170.4 L180 171.4 L160 171.9 L140 171.9 L120 171.4 L100 170.4 L80 168.9 L60 167.1 L40 164.9 L20 162.5 L0 160.0 Z" fill="#1E4A9B"/><path d="M0 0 H1200 L1200 150.0 L1180 147.5 L1160 145.1 L1140 142.9 L1120 141.1 L1100 139.6 L1080 138.6 L1060 138.1 L1040 138.1 L1020 138.6 L1000 139.6 L980 141.1 L960 142.9 L940 145.1 L920 147.5 L900 150.0 L880 152.5 L860 154.9 L840 157.1 L820 158.9 L800 160.4 L780 161.4 L760 161.9 L740 161.9 L720 161.4 L700 160.4 L680 158.9 L660 157.1 L640 154.9 L620 152.5 L600 150.0 L580 147.5 L560 145.1 L540 142.9 L520 141.1 L500 139.6 L480 138.6 L460 138.1 L440 138.1 L420 138.6 L400 139.6 L380 141.1 L360 142.9 L340 145.1 L320 147.5 L300 150.0 L280 152.5 L260 154.9 L240 157.1 L220 158.9 L200 160.4 L180 161.4 L160 161.9 L140 161.9 L120 161.4 L100 160.4 L80 158.9 L60 157.1 L40 154.9 L20 152.5 L0 150.0 Z" fill="#2458B8"/></svg><div class="bar"><img src="/wordscroll/icon.png" alt=""><a href="/wordscroll/">WordScroll</a></div></header>
+<main>
+<h1 id="top">What should WordScroll do next?</h1>
+<p class="lede" id="lede">Tell us what you'd like, and vote for what others have asked for. We read every one, and we answer here.</p>
+
+<noscript><p class="plain">The board needs JavaScript to show itself. Without it, write to us at wordscroll-support@jelly.fish and we'll read it just the same.</p></noscript>
+<p class="plain" id="fallback">If the board doesn't appear in a moment, write to us at wordscroll-support@jelly.fish and we'll read it just the same.</p>
+
+<section id="tell" class="panel" hidden aria-labelledby="tell-h">
+  <h2 id="tell-h">What would make it better?</h2>
+  <p class="quiet">This goes to us, not onto the board.</p>
+  <form id="tell-form" novalidate>
+    <label for="tell-body">Tell us what got in the way</label>
+    <textarea id="tell-body" name="body" rows="5" maxlength="1000" required></textarea>
+    <label for="tell-email">Email, if you'd like an answer <span class="opt">(optional)</span></label>
+    <input id="tell-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254">
+    <p class="quiet">We use it to answer this note, and for nothing else.</p>
+    <button type="submit" class="key">Send it to us</button>
+    <p class="said" id="tell-said" role="status" aria-live="polite"></p>
+  </form>
+  <p class="quiet"><a href="#board" id="see-board">See what others have asked for</a></p>
+</section>
+
+<section id="board" aria-labelledby="board-h" hidden>
+  <h2 id="board-h" class="sr">The board</h2>
+  <p class="said" id="board-said" role="status" aria-live="polite"></p>
+  <div id="lists"></div>
+</section>
+
+<section id="suggest" class="panel" hidden aria-labelledby="suggest-h">
+  <h2 id="suggest-h">Suggest something</h2>
+  <p class="quiet">It appears here once we've read it.</p>
+  <form id="suggest-form" novalidate>
+    <label for="suggest-title">Your idea, in a line</label>
+    <input id="suggest-title" name="title" type="text" maxlength="80" required autocomplete="off">
+    <label for="suggest-body">Anything to add? <span class="opt">(optional)</span></label>
+    <textarea id="suggest-body" name="body" rows="4" maxlength="1000"></textarea>
+    <label for="suggest-email">Email, to hear when it ships <span class="opt">(optional)</span></label>
+    <input id="suggest-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="254">
+    <p class="quiet">We write once, when your idea ships, and use it for nothing else.</p>
+    <button type="submit" class="key">Send it</button>
+    <p class="said" id="suggest-said" role="status" aria-live="polite"></p>
+  </form>
+</section>
+
+<p class="quiet foot">No account, no cookies. Your browser keeps one made-up token so a vote counts once. More in the <a href="/wordscroll/privacy/">privacy policy</a>.</p>
+<span id="board-config" hidden data-api="https://api.jelly.fish" data-key="sb_publishable_GoAxUEir9cMN6yNILkxVYA_fgMBnYZT"></span>
+<script src="board.js"></script>
+
+</main>
+<footer><a href="/wordscroll/feedback/">Feedback board</a> · <a href="/wordscroll/support/">Support</a> · <a href="/wordscroll/privacy/">Privacy policy</a> · <a href="/wordscroll/terms/">Terms of use</a><br>© 2026 Henry Truman Cunningham</footer>
+</body>
+</html>
